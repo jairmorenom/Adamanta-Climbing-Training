@@ -2252,9 +2252,6 @@ elif pagina == "Registrar sesión":
 # =========================================================
 # SEGUIMIENTO
 # =========================================================
-# =========================================================
-# SEGUIMIENTO
-# =========================================================
 
 elif pagina == "Seguimiento":
 
@@ -3143,7 +3140,6 @@ for insight in insights:
             "Cumplimiento semanal"
         )
 
-
         tabla = resumen[
             [
                 "Semana",
@@ -3159,41 +3155,25 @@ for insight in insights:
             ]
         ].copy()
 
+        tabla["Volumen %"] = (
+            tabla["Volumen %"].round(1)
+        )
 
-        tabla[
-            "Volumen %"
-        ] = tabla[
-            "Volumen %"
-        ].round(1)
+        tabla["Carga %"] = (
+            tabla["Carga %"].round(1)
+        )
 
+        tabla["RPE planificado"] = (
+            tabla["RPE planificado"].round(1)
+        )
 
-        tabla[
-            "Carga %"
-        ] = tabla[
-            "Carga %"
-        ].round(1)
+        tabla["RPE real"] = (
+            tabla["RPE real"].round(1)
+        )
 
-
-        tabla[
-            "RPE planificado"
-        ] = tabla[
-            "RPE planificado"
-        ].round(1)
-
-
-        tabla[
-            "RPE real"
-        ] = tabla[
-            "RPE real"
-        ].round(1)
-
-
-        tabla[
-            "Dif. RPE"
-        ] = tabla[
-            "Dif. RPE"
-        ].round(1)
-
+        tabla["Dif. RPE"] = (
+            tabla["Dif. RPE"].round(1)
+        )
 
         st.dataframe(
             tabla,
