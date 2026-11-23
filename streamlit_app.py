@@ -3378,7 +3378,7 @@ elif pagina == "Vista grupo":
     )
 
     # =====================================================
-    # MÉTRICA DEL HEATMAP
+    # HEATMAP DEL GRUPO
     # =====================================================
 
     st.divider()
@@ -3406,422 +3406,465 @@ elif pagina == "Vista grupo":
             "Selecciona una métrica para generar el heatmap."
         )
 
-        st.stop()
-
-    # =====================================================
-    # HEATMAP — NIVEL
-    # =====================================================
-
-    if metrica_heatmap == "Nivel de atención":
-
-        heatmap = (
-            alt.Chart(
-                resumen_grupo
-            )
-            .mark_rect(
-                cornerRadius=4
-            )
-            .encode(
-
-                x=alt.X(
-                    "Semana:O",
-                    title="Semana"
-                ),
-
-                y=alt.Y(
-                    "Alumno:N",
-                    title="",
-                    sort="ascending"
-                ),
-
-                color=alt.Color(
-                    "Nivel:N",
-                    title="Nivel",
-                    sort=[
-                        "OK",
-                        "MONITOREAR",
-                        "REVISAR",
-                        "ALTA"
-                    ]
-                ),
-
-                tooltip=[
-                    alt.Tooltip(
-                        "Alumno:N",
-                        title="Atleta"
-                    ),
-
-                    alt.Tooltip(
-                        "Semana:O",
-                        title="Semana"
-                    ),
-
-                    alt.Tooltip(
-                        "Nivel:N",
-                        title="Nivel"
-                    ),
-
-                    alt.Tooltip(
-                        "Volumen %:Q",
-                        title="Volumen",
-                        format=".1f"
-                    ),
-
-                    alt.Tooltip(
-                        "Carga %:Q",
-                        title="Carga",
-                        format=".1f"
-                    ),
-
-                    alt.Tooltip(
-                        "RPE real:Q",
-                        title="RPE real",
-                        format=".1f"
-                    ),
-
-                    alt.Tooltip(
-                        "Dif. RPE:Q",
-                        title="Δ RPE",
-                        format="+.1f"
-                    ),
-
-                    alt.Tooltip(
-                        "Sesiones registradas:Q",
-                        title="Sesiones"
-                    )
-                ]
-            )
-            .properties(
-                height=max(
-                    250,
-                    atletas_registrados * 45
-                )
-            )
-        )
-
-        texto = (
-            alt.Chart(
-                resumen_grupo
-            )
-            .mark_text(
-                fontSize=11
-            )
-            .encode(
-
-                x="Semana:O",
-
-                y=alt.Y(
-                    "Alumno:N",
-                    sort="ascending"
-                ),
-
-                text="Nivel corto:N"
-            )
-        )
-
-        grafica_final = (
-            heatmap
-            +
-            texto
-        )
-
-    # =====================================================
-    # HEATMAP — CARGA
-    # =====================================================
-
-    elif metrica_heatmap == "Carga %":
-
-        grafica_final = (
-            alt.Chart(
-                resumen_grupo
-            )
-            .mark_rect(
-                cornerRadius=4
-            )
-            .encode(
-
-                x=alt.X(
-                    "Semana:O",
-                    title="Semana"
-                ),
-
-                y=alt.Y(
-                    "Alumno:N",
-                    title="",
-                    sort="ascending"
-                ),
-
-                color=alt.Color(
-                    "Carga %:Q",
-                    title="Carga %"
-                ),
-
-                tooltip=[
-                    "Alumno:N",
-                    "Semana:O",
-
-                    alt.Tooltip(
-                        "Carga %:Q",
-                        format=".1f"
-                    ),
-
-                    alt.Tooltip(
-                        "Volumen %:Q",
-                        format=".1f"
-                    ),
-
-                    alt.Tooltip(
-                        "Dif. RPE:Q",
-                        format="+.1f"
-                    ),
-
-                    "Nivel:N"
-                ]
-            )
-            .properties(
-                height=max(
-                    250,
-                    atletas_registrados * 45
-                )
-            )
-        )
-
-    # =====================================================
-    # HEATMAP — VOLUMEN
-    # =====================================================
-
-    elif metrica_heatmap == "Volumen %":
-
-        grafica_final = (
-            alt.Chart(
-                resumen_grupo
-            )
-            .mark_rect(
-                cornerRadius=4
-            )
-            .encode(
-
-                x=alt.X(
-                    "Semana:O",
-                    title="Semana"
-                ),
-
-                y=alt.Y(
-                    "Alumno:N",
-                    title="",
-                    sort="ascending"
-                ),
-
-                color=alt.Color(
-                    "Volumen %:Q",
-                    title="Volumen %"
-                ),
-
-                tooltip=[
-                    "Alumno:N",
-                    "Semana:O",
-
-                    alt.Tooltip(
-                        "Volumen %:Q",
-                        format=".1f"
-                    ),
-
-                    alt.Tooltip(
-                        "Carga %:Q",
-                        format=".1f"
-                    ),
-
-                    alt.Tooltip(
-                        "Dif. RPE:Q",
-                        format="+.1f"
-                    ),
-
-                    "Nivel:N"
-                ]
-            )
-            .properties(
-                height=max(
-                    250,
-                    atletas_registrados * 45
-                )
-            )
-        )
-
-    # =====================================================
-    # HEATMAP — DIFERENCIA RPE
-    # =====================================================
     else:
 
-        df_rpe_heatmap = (
-            resumen_grupo[
-                [
-                    "Alumno",
-                    "Semana",
-                    "RPE planificado",
-                    "RPE real",
-                    "Dif. RPE",
-                    "Carga %",
-                    "Volumen %",
-                    "Nivel"
-                ]
-            ]
-            .copy()
-        )
+        # =================================================
+        # COPIA DE DATOS PARA VISUALIZACIÓN
+        # =================================================
 
-        # Asegurar valores numéricos
-        df_rpe_heatmap["Dif. RPE"] = pd.to_numeric(
-            df_rpe_heatmap["Dif. RPE"],
+        df_heatmap = resumen_grupo.copy()
+
+        df_heatmap["Semana"] = pd.to_numeric(
+            df_heatmap["Semana"],
             errors="coerce"
         )
 
-        # Quitar solamente registros sin información RPE
-        df_rpe_heatmap = df_rpe_heatmap.dropna(
+        df_heatmap["Carga %"] = pd.to_numeric(
+            df_heatmap["Carga %"],
+            errors="coerce"
+        )
+
+        df_heatmap["Volumen %"] = pd.to_numeric(
+            df_heatmap["Volumen %"],
+            errors="coerce"
+        )
+
+        df_heatmap["Dif. RPE"] = pd.to_numeric(
+            df_heatmap["Dif. RPE"],
+            errors="coerce"
+        )
+
+        df_heatmap["RPE planificado"] = pd.to_numeric(
+            df_heatmap["RPE planificado"],
+            errors="coerce"
+        )
+
+        df_heatmap["RPE real"] = pd.to_numeric(
+            df_heatmap["RPE real"],
+            errors="coerce"
+        )
+
+        df_heatmap = df_heatmap.dropna(
             subset=[
-                "Dif. RPE"
+                "Alumno",
+                "Semana"
             ]
         )
 
 
-        if df_rpe_heatmap.empty:
+        # =================================================
+        # NIVEL DE ATENCIÓN
+        # =================================================
 
-            st.warning(
-                "No hay datos de RPE suficientes para "
-                "generar este heatmap."
+        if metrica_heatmap == "Nivel de atención":
+
+            df_chart = df_heatmap.dropna(
+                subset=[
+                    "Nivel"
+                ]
             )
 
-            st.stop()
+            grafica_final = (
+                alt.Chart(
+                    df_chart
+                )
+                .mark_rect(
+                    cornerRadius=5
+                )
+                .encode(
 
-
-        # ---------------------------------------------
-        # HEATMAP
-        # ---------------------------------------------
-
-        heatmap_rpe = (
-            alt.Chart(
-                df_rpe_heatmap
-            )
-            .mark_rect(
-                cornerRadius=4
-            )
-            .encode(
-
-                x=alt.X(
-                    "Semana:O",
-                    title="Semana"
-                ),
-
-                y=alt.Y(
-                    "Alumno:N",
-                    title="",
-                    sort="ascending"
-                ),
-
-                color=alt.Color(
-                    "Dif. RPE:Q",
-                    title="Δ RPE",
-                    scale=alt.Scale(
-                        domain=[
-                            -3,
-                            0,
-                            3
-                        ],
-                        scheme="redyellowgreen",
-                        reverse=True
-                    )
-                ),
-
-                tooltip=[
-
-                    alt.Tooltip(
-                        "Alumno:N",
-                        title="Atleta"
-                    ),
-
-                    alt.Tooltip(
+                    x=alt.X(
                         "Semana:O",
                         title="Semana"
                     ),
 
-                    alt.Tooltip(
-                        "RPE planificado:Q",
-                        title="RPE planificado",
-                        format=".1f"
+                    y=alt.Y(
+                        "Alumno:N",
+                        title="Atleta",
+                        sort="ascending"
                     ),
 
-                    alt.Tooltip(
-                        "RPE real:Q",
-                        title="RPE real",
-                        format=".1f"
-                    ),
-
-                    alt.Tooltip(
-                        "Dif. RPE:Q",
-                        title="Δ RPE",
-                        format="+.1f"
-                    ),
-
-                    alt.Tooltip(
-                        "Carga %:Q",
-                        title="Carga",
-                        format=".1f"
-                    ),
-
-                    alt.Tooltip(
-                        "Volumen %:Q",
-                        title="Volumen",
-                        format=".1f"
-                    ),
-
-                    alt.Tooltip(
+                    color=alt.Color(
                         "Nivel:N",
-                        title="Nivel"
+                        title="Nivel",
+                        scale=alt.Scale(
+                            domain=[
+                                "OK",
+                                "MONITOREAR",
+                                "REVISAR",
+                                "ALTA"
+                            ],
+                            range=[
+                                "#2ECC71",
+                                "#F1C40F",
+                                "#E67E22",
+                                "#E74C3C"
+                            ]
+                        )
+                    ),
+
+                    tooltip=[
+                        alt.Tooltip(
+                            "Alumno:N",
+                            title="Atleta"
+                        ),
+
+                        alt.Tooltip(
+                            "Semana:O",
+                            title="Semana"
+                        ),
+
+                        alt.Tooltip(
+                            "Nivel:N",
+                            title="Nivel"
+                        ),
+
+                        alt.Tooltip(
+                            "Volumen %:Q",
+                            title="Volumen %",
+                            format=".1f"
+                        ),
+
+                        alt.Tooltip(
+                            "Carga %:Q",
+                            title="Carga %",
+                            format=".1f"
+                        ),
+
+                        alt.Tooltip(
+                            "RPE planificado:Q",
+                            title="RPE planificado",
+                            format=".1f"
+                        ),
+
+                        alt.Tooltip(
+                            "RPE real:Q",
+                            title="RPE real",
+                            format=".1f"
+                        ),
+
+                        alt.Tooltip(
+                            "Dif. RPE:Q",
+                            title="Δ RPE",
+                            format="+.1f"
+                        )
+                    ]
+                )
+                .properties(
+                    height=max(
+                        250,
+                        atletas_registrados * 55
                     )
+                )
+            )
+
+
+        # =================================================
+        # CARGA
+        # =================================================
+
+        elif metrica_heatmap == "Carga %":
+
+            df_chart = df_heatmap.dropna(
+                subset=[
+                    "Carga %"
                 ]
             )
-            .properties(
-                height=max(
-                    250,
-                    atletas_registrados * 45
+
+            grafica_final = (
+                alt.Chart(
+                    df_chart
+                )
+                .mark_rect(
+                    cornerRadius=5
+                )
+                .encode(
+
+                    x=alt.X(
+                        "Semana:O",
+                        title="Semana"
+                    ),
+
+                    y=alt.Y(
+                        "Alumno:N",
+                        title="Atleta",
+                        sort="ascending"
+                    ),
+
+                    color=alt.Color(
+                        "Carga %:Q",
+                        title="Carga %",
+                        scale=alt.Scale(
+                            domain=[
+                                70,
+                                100,
+                                130
+                            ],
+                            range=[
+                                "#3498DB",
+                                "#2ECC71",
+                                "#E74C3C"
+                            ]
+                        )
+                    ),
+
+                    tooltip=[
+                        alt.Tooltip(
+                            "Alumno:N",
+                            title="Atleta"
+                        ),
+
+                        alt.Tooltip(
+                            "Semana:O",
+                            title="Semana"
+                        ),
+
+                        alt.Tooltip(
+                            "Carga %:Q",
+                            title="Carga %",
+                            format=".1f"
+                        ),
+
+                        alt.Tooltip(
+                            "Volumen %:Q",
+                            title="Volumen %",
+                            format=".1f"
+                        ),
+
+                        alt.Tooltip(
+                            "Dif. RPE:Q",
+                            title="Δ RPE",
+                            format="+.1f"
+                        ),
+
+                        alt.Tooltip(
+                            "Nivel:N",
+                            title="Nivel"
+                        )
+                    ]
+                )
+                .properties(
+                    height=max(
+                        250,
+                        atletas_registrados * 55
+                    )
                 )
             )
-        )
 
 
-        # ---------------------------------------------
-        # TEXTO SOBRE CADA CELDA
-        # ---------------------------------------------
+        # =================================================
+        # VOLUMEN
+        # =================================================
 
-        texto_rpe = (
-            alt.Chart(
-                df_rpe_heatmap
+        elif metrica_heatmap == "Volumen %":
+
+            df_chart = df_heatmap.dropna(
+                subset=[
+                    "Volumen %"
+                ]
             )
-            .mark_text(
-                fontSize=12,
-                fontWeight="bold"
-            )
-            .encode(
 
-                x="Semana:O",
+            grafica_final = (
+                alt.Chart(
+                    df_chart
+                )
+                .mark_rect(
+                    cornerRadius=5
+                )
+                .encode(
 
-                y=alt.Y(
-                    "Alumno:N",
-                    sort="ascending"
-                ),
+                    x=alt.X(
+                        "Semana:O",
+                        title="Semana"
+                    ),
 
-                text=alt.Text(
-                    "Dif. RPE:Q",
-                    format="+.1f"
+                    y=alt.Y(
+                        "Alumno:N",
+                        title="Atleta",
+                        sort="ascending"
+                    ),
+
+                    color=alt.Color(
+                        "Volumen %:Q",
+                        title="Volumen %",
+                        scale=alt.Scale(
+                            domain=[
+                                70,
+                                100,
+                                130
+                            ],
+                            range=[
+                                "#3498DB",
+                                "#2ECC71",
+                                "#E74C3C"
+                            ]
+                        )
+                    ),
+
+                    tooltip=[
+                        alt.Tooltip(
+                            "Alumno:N",
+                            title="Atleta"
+                        ),
+
+                        alt.Tooltip(
+                            "Semana:O",
+                            title="Semana"
+                        ),
+
+                        alt.Tooltip(
+                            "Volumen %:Q",
+                            title="Volumen %",
+                            format=".1f"
+                        ),
+
+                        alt.Tooltip(
+                            "Carga %:Q",
+                            title="Carga %",
+                            format=".1f"
+                        ),
+
+                        alt.Tooltip(
+                            "Dif. RPE:Q",
+                            title="Δ RPE",
+                            format="+.1f"
+                        ),
+
+                        alt.Tooltip(
+                            "Nivel:N",
+                            title="Nivel"
+                        )
+                    ]
+                )
+                .properties(
+                    height=max(
+                        250,
+                        atletas_registrados * 55
+                    )
                 )
             )
-        )
 
 
-        grafica_final = (
-            heatmap_rpe
-            +
-            texto_rpe
-        )
+        # =================================================
+        # Δ RPE
+        # =================================================
 
+        else:
+
+            df_chart = df_heatmap.dropna(
+                subset=[
+                    "Dif. RPE"
+                ]
+            )
+
+            grafica_final = (
+                alt.Chart(
+                    df_chart
+                )
+                .mark_rect(
+                    cornerRadius=5
+                )
+                .encode(
+
+                    x=alt.X(
+                        "Semana:O",
+                        title="Semana"
+                    ),
+
+                    y=alt.Y(
+                        "Alumno:N",
+                        title="Atleta",
+                        sort="ascending"
+                    ),
+
+                    color=alt.Color(
+                        "Dif. RPE:Q",
+                        title="Δ RPE",
+                        scale=alt.Scale(
+                            domain=[
+                                -3,
+                                0,
+                                3
+                            ],
+                            range=[
+                                "#3498DB",
+                                "#2ECC71",
+                                "#E74C3C"
+                            ]
+                        )
+                    ),
+
+                    tooltip=[
+                        alt.Tooltip(
+                            "Alumno:N",
+                            title="Atleta"
+                        ),
+
+                        alt.Tooltip(
+                            "Semana:O",
+                            title="Semana"
+                        ),
+
+                        alt.Tooltip(
+                            "RPE planificado:Q",
+                            title="RPE planificado",
+                            format=".1f"
+                        ),
+
+                        alt.Tooltip(
+                            "RPE real:Q",
+                            title="RPE real",
+                            format=".1f"
+                        ),
+
+                        alt.Tooltip(
+                            "Dif. RPE:Q",
+                            title="Δ RPE",
+                            format="+.1f"
+                        ),
+
+                        alt.Tooltip(
+                            "Carga %:Q",
+                            title="Carga %",
+                            format=".1f"
+                        ),
+
+                        alt.Tooltip(
+                            "Nivel:N",
+                            title="Nivel"
+                        )
+                    ]
+                )
+                .properties(
+                    height=max(
+                        250,
+                        atletas_registrados * 55
+                    )
+                )
+            )
+
+
+        # =================================================
+        # MOSTRAR GRÁFICA
+        # =================================================
+
+        if df_chart.empty:
+
+            st.warning(
+                "No hay datos suficientes para mostrar esta métrica."
+            )
+
+        else:
+
+            st.altair_chart(
+                grafica_final,
+                use_container_width=True
+            )
+
+            st.caption(
+                f"Mostrando {len(df_chart)} registros "
+                f"de {df_chart['Alumno'].nunique()} atletas."
+            )
     # =====================================================
     # PRIORIDADES DEL COACH
     # =====================================================
