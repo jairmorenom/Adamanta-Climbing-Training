@@ -3748,27 +3748,91 @@ elif pagina == "Vista grupo":
         # =================================================
         # Δ RPE
         # =================================================
+        # =================================================
+        # Δ RPE
+        # =================================================
 
         else:
 
-            df_chart = df_heatmap.dropna(
+            df_chart = df_heatmap[
+                [
+                    "Alumno",
+                    "Semana",
+                    "RPE planificado",
+                    "RPE real",
+                    "Dif. RPE",
+                    "Carga %",
+                    "Volumen %",
+                    "Nivel"
+                ]
+            ].copy()
+
+            # ---------------------------------------------
+            # LIMPIEZA ESPECÍFICA
+            # ---------------------------------------------
+
+            df_chart["Dif. RPE"] = pd.to_numeric(
+                df_chart["Dif. RPE"],
+                errors="coerce"
+            )
+
+            df_chart["RPE planificado"] = pd.to_numeric(
+                df_chart["RPE planificado"],
+                errors="coerce"
+            )
+
+            df_chart["RPE real"] = pd.to_numeric(
+                df_chart["RPE real"],
+                errors="coerce"
+            )
+
+            df_chart = df_chart.dropna(
                 subset=[
+                    "Alumno",
+                    "Semana",
                     "Dif. RPE"
                 ]
             )
 
-            grafica_final = (
+            # Forzar tipo numérico normal
+            df_chart["Dif. RPE"] = (
+                df_chart["Dif. RPE"]
+                .astype(float)
+            )
+
+            # Convertir semana a categoría de texto
+            # Esto evita problemas cuando solo hay una semana
+            df_chart["Semana heatmap"] = (
+                df_chart["Semana"]
+                .astype(int)
+                .astype(str)
+            )
+
+            # Texto que aparecerá dentro de cada celda
+            df_chart["Δ RPE texto"] = (
+                df_chart["Dif. RPE"]
+                .map(
+                    lambda x: f"{x:+.1f}"
+                )
+            )
+
+            # ---------------------------------------------
+            # HEATMAP BASE
+            # ---------------------------------------------
+
+            heatmap_rpe = (
                 alt.Chart(
                     df_chart
                 )
                 .mark_rect(
-                    cornerRadius=5
+                    cornerRadius=6
                 )
                 .encode(
 
                     x=alt.X(
-                        "Semana:O",
-                        title="Semana"
+                        "Semana heatmap:N",
+                        title="Semana",
+                        sort=None
                     ),
 
                     y=alt.Y(
@@ -3783,25 +3847,22 @@ elif pagina == "Vista grupo":
                         scale=alt.Scale(
                             domain=[
                                 -3,
-                                0,
                                 3
                             ],
-                            range=[
-                                "#3498DB",
-                                "#2ECC71",
-                                "#E74C3C"
-                            ]
+                            scheme="redyellowgreen",
+                            reverse=True
                         )
                     ),
 
                     tooltip=[
+
                         alt.Tooltip(
                             "Alumno:N",
                             title="Atleta"
                         ),
 
                         alt.Tooltip(
-                            "Semana:O",
+                            "Semana heatmap:N",
                             title="Semana"
                         ),
 
@@ -3824,6 +3885,12 @@ elif pagina == "Vista grupo":
                         ),
 
                         alt.Tooltip(
+                            "Volumen %:Q",
+                            title="Volumen %",
+                            format=".1f"
+                        ),
+
+                        alt.Tooltip(
                             "Carga %:Q",
                             title="Carga %",
                             format=".1f"
@@ -3841,6 +3908,47 @@ elif pagina == "Vista grupo":
                         atletas_registrados * 55
                     )
                 )
+            )
+
+            # ---------------------------------------------
+            # VALOR DENTRO DE LA CELDA
+            # ---------------------------------------------
+
+            texto_rpe = (
+                alt.Chart(
+                    df_chart
+                )
+                .mark_text(
+                    fontSize=13,
+                    fontWeight="bold",
+                    color="white"
+                )
+                .encode(
+
+                    x=alt.X(
+                        "Semana heatmap:N",
+                        sort=None
+                    ),
+
+                    y=alt.Y(
+                        "Alumno:N",
+                        sort="ascending"
+                    ),
+
+                    text=alt.Text(
+                        "Δ RPE texto:N"
+                    )
+                )
+            )
+
+            # ---------------------------------------------
+            # COMBINAR
+            # ---------------------------------------------
+
+            grafica_final = (
+                heatmap_rpe
+                +
+                texto_rpe
             )
 
 
