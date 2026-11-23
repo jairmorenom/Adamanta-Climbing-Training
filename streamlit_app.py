@@ -647,7 +647,369 @@ def generar_recomendacion(
         )
 
     return "Mantener planificación actual"
+# =========================================================
+# COACH INSIGHTS
+# =========================================================
 
+def generar_coach_insights(resumen):
+
+    insights = []
+
+    if resumen.empty:
+        return insights
+
+    resumen = (
+        resumen
+        .sort_values("Semana")
+        .copy()
+    )
+
+    ultimas = resumen.tail(3).copy()
+    ultima = resumen.iloc[-1]
+
+    # =====================================================
+    # 1. CUMPLIMIENTO GENERAL DEL BLOQUE
+    # =====================================================
+
+    volumen_plan_total = (
+        resumen["Volumen planificado"].sum()
+    )
+
+    volumen_real_total = (
+        resumen["Volumen real"].sum()
+    )
+
+    carga_plan_total = (
+        resumen["Carga planificada"].sum()
+    )
+
+    carga_real_total = (
+        resumen["Carga real"].sum()
+    )
+
+    volumen_pct_total = (
+        volumen_real_total
+        / volumen_plan_total
+        * 100
+        if volumen_plan_total > 0
+        else 0
+    )
+
+    carga_pct_total = (
+        carga_real_total
+        / carga_plan_total
+        * 100
+        if carga_plan_total > 0
+        else 0
+    )
+
+    rpe_plan_total = (
+        resumen["RPE planificado"].mean()
+    )
+
+    rpe_real_total = (
+        resumen["RPE real"].mean()
+    )
+
+    dif_rpe_total = (
+        rpe_real_total
+        -
+        rpe_plan_total
+    )
+
+
+    # =====================================================
+    # 2. CUMPLIMIENTO DEL BLOQUE
+    # =====================================================
+
+    if (
+        90 <= volumen_pct_total <= 110
+        and
+        90 <= carga_pct_total <= 110
+        and
+        abs(dif_rpe_total) < 1
+    ):
+
+        insights.append({
+            "nivel": "POSITIVO",
+            "titulo": "Buena adherencia al plan",
+            "mensaje": (
+                f"El atleta acumula {volumen_pct_total:.1f}% "
+                f"del volumen y {carga_pct_total:.1f}% de la carga "
+                "planificada, con un RPE cercano al objetivo."
+            ),
+            "accion": (
+                "Mantener la planificación actual mientras "
+                "la calidad de ejecución siga siendo buena."
+            )
+        })
+
+
+    # =====================================================
+    # 3. RPE RECIENTE
+    # =====================================================
+
+    if len(ultimas) >= 2:
+
+        rpe_alto = (
+            ultimas["Dif. RPE"]
+            >= 1
+        )
+
+        if rpe_alto.tail(2).all():
+
+            insights.append({
+                "nivel": "ATENCION",
+                "titulo": "RPE por encima del plan",
+                "mensaje": (
+                    "Las últimas 2 semanas registradas presentan "
+                    "un RPE medio superior al plan."
+                ),
+                "accion": (
+                    "Evitar aumentar volumen o intensidad hasta "
+                    "comprobar si el RPE vuelve al rango previsto."
+                )
+            })
+
+
+    if len(ultimas) >= 3:
+
+        if (
+            ultimas["Dif. RPE"]
+            >= 1
+        ).all():
+
+            insights.append({
+                "nivel": "ALERTA",
+                "titulo": "RPE elevado durante 3 semanas",
+                "mensaje": (
+                    "El esfuerzo percibido se ha mantenido por encima "
+                    "de lo planificado durante las últimas 3 semanas."
+                ),
+                "accion": (
+                    "Revisar la carga de la siguiente semana y considerar "
+                    "reducir temporalmente volumen o intensidad."
+                )
+            })
+
+
+    # =====================================================
+    # 4. ADAPTACIÓN POSITIVA
+    # =====================================================
+
+    if len(ultimas) >= 3:
+
+        primera = ultimas.iloc[0]
+        reciente = ultimas.iloc[-1]
+
+        aumento_volumen = (
+            reciente["Volumen real"]
+            >
+            primera["Volumen real"] * 1.05
+        )
+
+        rpe_estable = (
+            reciente["RPE real"]
+            <=
+            primera["RPE real"] + 0.5
+        )
+
+        if aumento_volumen and rpe_estable:
+
+            insights.append({
+                "nivel": "POSITIVO",
+                "titulo": "Posible adaptación positiva",
+                "mensaje": (
+                    "El volumen real ha aumentado en las últimas semanas "
+                    "sin un aumento proporcional del RPE."
+                ),
+                "accion": (
+                    "Mantener la progresión prevista. Si la técnica y la "
+                    "recuperación son buenas, puede continuar el incremento "
+                    "gradual planificado."
+                )
+            })
+
+
+    # =====================================================
+    # 5. MENOS TRABAJO + MÁS ESFUERZO
+    # =====================================================
+
+    if len(ultimas) >= 2:
+
+        anterior = ultimas.iloc[-2]
+        reciente = ultimas.iloc[-1]
+
+        volumen_baja = (
+            reciente["Volumen real"]
+            <
+            anterior["Volumen real"] * 0.90
+        )
+
+        rpe_sube = (
+            reciente["RPE real"]
+            >
+            anterior["RPE real"] + 0.5
+        )
+
+        if volumen_baja and rpe_sube:
+
+            insights.append({
+                "nivel": "ALERTA",
+                "titulo": "Menor volumen con mayor esfuerzo",
+                "mensaje": (
+                    "La última semana produjo menos volumen que la anterior, "
+                    "pero con un RPE mayor."
+                ),
+                "accion": (
+                    "No progresar la carga todavía. Revisar recuperación, "
+                    "dificultad de los ejercicios y calidad técnica."
+                )
+            })
+
+
+    # =====================================================
+    # 6. CARGA RECIENTE
+    # =====================================================
+
+    if len(ultimas) >= 3:
+
+        carga_inicio = (
+            ultimas.iloc[0]["Carga real"]
+        )
+
+        carga_final = (
+            ultimas.iloc[-1]["Carga real"]
+        )
+
+        if carga_inicio > 0:
+
+            cambio_carga = (
+                (
+                    carga_final
+                    -
+                    carga_inicio
+                )
+                /
+                carga_inicio
+                *
+                100
+            )
+
+            if cambio_carga > 20:
+
+                insights.append({
+                    "nivel": "ATENCION",
+                    "titulo": "Aumento rápido de carga",
+                    "mensaje": (
+                        f"La carga real aumentó aproximadamente "
+                        f"{cambio_carga:.1f}% entre la primera y la última "
+                        "de las 3 semanas recientes."
+                    ),
+                    "accion": (
+                        "Confirmar que el aumento estaba previsto antes de "
+                        "seguir progresando la siguiente semana."
+                    )
+                })
+
+
+            elif cambio_carga < -20:
+
+                insights.append({
+                    "nivel": "ATENCION",
+                    "titulo": "Caída marcada de carga",
+                    "mensaje": (
+                        f"La carga real disminuyó aproximadamente "
+                        f"{abs(cambio_carga):.1f}% durante las últimas "
+                        "3 semanas."
+                    ),
+                    "accion": (
+                        "Revisar si corresponde a una descarga programada, "
+                        "ausencias o menor cumplimiento del entrenamiento."
+                    )
+                })
+
+
+    # =====================================================
+    # 7. ÚLTIMA SEMANA
+    # =====================================================
+
+    volumen_ultima = (
+        ultima["Volumen %"]
+    )
+
+    carga_ultima = (
+        ultima["Carga %"]
+    )
+
+    dif_rpe_ultima = (
+        ultima["Dif. RPE"]
+    )
+
+
+    if (
+        volumen_ultima < 80
+        and
+        dif_rpe_ultima < 1
+    ):
+
+        insights.append({
+            "nivel": "ATENCION",
+            "titulo": "Volumen por debajo del objetivo",
+            "mensaje": (
+                f"La última semana alcanzó solamente "
+                f"{volumen_ultima:.1f}% del volumen planificado."
+            ),
+            "accion": (
+                "Identificar si hubo ausencias o ejercicios incompletos. "
+                "Si el RPE y la técnica fueron adecuados, recuperar volumen "
+                "de forma progresiva."
+            )
+        })
+
+
+    if (
+        carga_ultima > 120
+        or
+        volumen_ultima > 120
+    ):
+
+        insights.append({
+            "nivel": "ALERTA",
+            "titulo": "La última semana superó el plan",
+            "mensaje": (
+                f"Volumen: {volumen_ultima:.1f}% · "
+                f"Carga: {carga_ultima:.1f}% del objetivo."
+            ),
+            "accion": (
+                "Evitar seguir aumentando la siguiente sesión sin revisar "
+                "si el exceso de carga fue intencional."
+            )
+        })
+
+
+    # =====================================================
+    # 8. SIN SEÑALES RELEVANTES
+    # =====================================================
+
+    if not insights:
+
+        insights.append({
+            "nivel": "ESTABLE",
+            "titulo": "Respuesta estable",
+            "mensaje": (
+                "No se detectan desviaciones importantes respecto "
+                "a la planificación con los datos disponibles."
+            ),
+            "accion": (
+                "Mantener el plan y continuar registrando volumen, "
+                "RPE y carga."
+            )
+        })
+
+
+    # Máximo de insights mostrados
+    return insights[:5]
 
 # =========================================================
 # ACTUALIZAR SEGUIMIENTO POR BLOQUE
@@ -2312,7 +2674,128 @@ elif pagina == "Seguimiento":
                 "carga"
             )
         )
+# =========================================================
+# COACH INSIGHTS
+# =========================================================
 
+st.divider()
+
+st.subheader(
+    "Coach Insights"
+)
+
+st.caption(
+    "Interpretación automática de la respuesta del atleta "
+    "respecto a la planificación."
+)
+
+
+insights = generar_coach_insights(
+    resumen
+)
+
+
+for insight in insights:
+
+    nivel = insight[
+        "nivel"
+    ]
+
+    titulo = insight[
+        "titulo"
+    ]
+
+    mensaje = insight[
+        "mensaje"
+    ]
+
+    accion = insight[
+        "accion"
+    ]
+
+
+    if nivel == "POSITIVO":
+
+        icono = "✅"
+
+        with st.container(
+            border=True
+        ):
+
+            st.markdown(
+                f"### {icono} {titulo}"
+            )
+
+            st.write(
+                mensaje
+            )
+
+            st.success(
+                f"**Acción sugerida:** {accion}"
+            )
+
+
+    elif nivel == "ALERTA":
+
+        icono = "🔴"
+
+        with st.container(
+            border=True
+        ):
+
+            st.markdown(
+                f"### {icono} {titulo}"
+            )
+
+            st.write(
+                mensaje
+            )
+
+            st.error(
+                f"**Acción sugerida:** {accion}"
+            )
+
+
+    elif nivel == "ATENCION":
+
+        icono = "🟠"
+
+        with st.container(
+            border=True
+        ):
+
+            st.markdown(
+                f"### {icono} {titulo}"
+            )
+
+            st.write(
+                mensaje
+            )
+
+            st.warning(
+                f"**Acción sugerida:** {accion}"
+            )
+
+
+    else:
+
+        icono = "🔵"
+
+        with st.container(
+            border=True
+        ):
+
+            st.markdown(
+                f"### {icono} {titulo}"
+            )
+
+            st.write(
+                mensaje
+            )
+
+            st.info(
+                f"**Acción sugerida:** {accion}"
+            )
 
     # =====================================================
     # ÚLTIMA SEMANA
