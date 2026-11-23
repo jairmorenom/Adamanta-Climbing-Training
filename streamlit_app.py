@@ -3029,7 +3029,304 @@ elif pagina == "Seguimiento":
             use_container_width=True,
             hide_index=True
         )
+    # =====================================================
+    # RELACIÓN VOLUMEN – RPE
+    # =====================================================
 
+    st.divider()
+
+    st.subheader(
+        "Relación Volumen – RPE"
+    )
+
+    st.caption(
+        "Cada punto representa una semana registrada. "
+        "La posición muestra cuánto volumen produjo el atleta "
+        "para el nivel de esfuerzo percibido."
+    )
+
+    # =====================================================
+    # DATOS PARA SCATTER
+    # =====================================================
+
+    scatter_data = resumen[
+        [
+            "Semana",
+            "Volumen real",
+            "RPE real",
+            "Volumen %",
+            "Carga %",
+            "Dif. RPE"
+        ]
+    ].copy()
+
+    scatter_data = scatter_data.dropna(
+        subset=[
+            "Semana",
+            "Volumen real",
+            "RPE real"
+        ]
+    )
+
+    scatter_data["Semana texto"] = (
+        "Semana "
+        +
+        scatter_data[
+            "Semana"
+        ]
+        .astype(int)
+        .astype(str)
+    )
+
+    # =====================================================
+    # SCATTER
+    # =====================================================
+
+    scatter_volumen_rpe = (
+        alt.Chart(
+            scatter_data
+        )
+        .mark_circle(
+            size=180,
+            opacity=0.85
+        )
+        .encode(
+
+            x=alt.X(
+                "Volumen real:Q",
+                title="Volumen real"
+            ),
+
+            y=alt.Y(
+                "RPE real:Q",
+                title="RPE real",
+                scale=alt.Scale(
+                    domain=[
+                        0,
+                        10
+                    ]
+                )
+            ),
+
+            color=alt.Color(
+                "Dif. RPE:Q",
+                title="Δ RPE",
+                scale=alt.Scale(
+                    domain=[
+                        -3,
+                        0,
+                        3
+                    ],
+                    range=[
+                        "#3498DB",
+                        "#2ECC71",
+                        "#E74C3C"
+                    ]
+                )
+            ),
+
+            tooltip=[
+                alt.Tooltip(
+                    "Semana texto:N",
+                    title="Semana"
+                ),
+
+                alt.Tooltip(
+                    "Volumen real:Q",
+                    title="Volumen real",
+                    format=".0f"
+                ),
+
+                alt.Tooltip(
+                    "RPE real:Q",
+                    title="RPE real",
+                    format=".1f"
+                ),
+
+                alt.Tooltip(
+                    "Volumen %:Q",
+                    title="Volumen %",
+                    format=".1f"
+                ),
+
+                alt.Tooltip(
+                    "Carga %:Q",
+                    title="Carga %",
+                    format=".1f"
+                ),
+
+                alt.Tooltip(
+                    "Dif. RPE:Q",
+                    title="Δ RPE",
+                    format="+.1f"
+                )
+            ]
+        )
+        .properties(
+            height=420
+        )
+        .interactive()
+    )
+
+    st.altair_chart(
+        scatter_volumen_rpe,
+        use_container_width=True
+    )
+
+
+    # =====================================================
+    # INTERPRETACIÓN DE LA TENDENCIA
+    # =====================================================
+
+    if len(scatter_data) >= 2:
+
+        primera_semana_scatter = (
+            scatter_data
+            .sort_values(
+                "Semana"
+            )
+            .iloc[0]
+        )
+
+        ultima_semana_scatter = (
+            scatter_data
+            .sort_values(
+                "Semana"
+            )
+            .iloc[-1]
+        )
+
+        cambio_volumen = (
+            ultima_semana_scatter[
+                "Volumen real"
+            ]
+            -
+            primera_semana_scatter[
+                "Volumen real"
+            ]
+        )
+
+        cambio_rpe = (
+            ultima_semana_scatter[
+                "RPE real"
+            ]
+            -
+            primera_semana_scatter[
+                "RPE real"
+            ]
+        )
+
+        st.subheader(
+            "Interpretación"
+        )
+
+        # ---------------------------------------------
+        # MÁS VOLUMEN + RPE ESTABLE / MENOR
+        # ---------------------------------------------
+
+        if (
+            cambio_volumen > 0
+            and cambio_rpe <= 0.5
+        ):
+
+            st.success(
+                "✅ Posible adaptación positiva: "
+                "el atleta está produciendo más volumen "
+                "sin un aumento proporcional del RPE."
+            )
+
+            st.write(
+                "Esto puede indicar una mejor tolerancia "
+                "al estímulo. Si la técnica y la recuperación "
+                "son buenas, la progresión puede mantenerse."
+            )
+
+        # ---------------------------------------------
+        # MENOS VOLUMEN + MÁS RPE
+        # ---------------------------------------------
+
+        elif (
+            cambio_volumen < 0
+            and cambio_rpe > 0.5
+        ):
+
+            st.error(
+                "🔴 Señal de atención: "
+                "el atleta está produciendo menos volumen "
+                "con mayor esfuerzo percibido."
+            )
+
+            st.write(
+                "Conviene revisar recuperación, dificultad "
+                "de las sesiones y calidad de ejecución antes "
+                "de progresar la carga."
+            )
+
+        # ---------------------------------------------
+        # MISMO VOLUMEN + MENOS RPE
+        # ---------------------------------------------
+
+        elif (
+            abs(cambio_volumen)
+            <=
+            primera_semana_scatter[
+                "Volumen real"
+            ] * 0.10
+            and cambio_rpe < -0.5
+        ):
+
+            st.success(
+                "✅ Mejora de tolerancia: "
+                "el atleta mantiene un volumen similar "
+                "con menor esfuerzo percibido."
+            )
+
+            st.write(
+                "Puede ser una buena señal para considerar "
+                "una progresión gradual del estímulo."
+            )
+
+        # ---------------------------------------------
+        # MÁS VOLUMEN + MÁS RPE
+        # ---------------------------------------------
+
+        elif (
+            cambio_volumen > 0
+            and cambio_rpe > 0.5
+        ):
+
+            st.warning(
+                "🟠 La carga de trabajo está aumentando "
+                "junto con el esfuerzo percibido."
+            )
+
+            st.write(
+                "No necesariamente es negativo si estaba "
+                "planificado. Conviene observar las próximas "
+                "semanas antes de seguir aumentando."
+            )
+
+        # ---------------------------------------------
+        # ESTABLE
+        # ---------------------------------------------
+
+        else:
+
+            st.info(
+                "🔵 Relación Volumen–RPE estable."
+            )
+
+            st.write(
+                "No se observa un cambio suficientemente "
+                "grande para inferir una tendencia clara."
+            )
+
+    else:
+
+        st.info(
+            "Se necesitan al menos 2 semanas registradas "
+            "para interpretar la tendencia Volumen–RPE."
+        )
 # =========================================================
 # VISTA GRUPO
 # =========================================================
