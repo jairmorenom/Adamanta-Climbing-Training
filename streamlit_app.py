@@ -3,6 +3,7 @@ import pandas as pd
 import random
 import urllib.parse
 import requests
+import altair as alt
 
 
 # =========================================================
@@ -1889,12 +1890,22 @@ elif pagina == "Registrar sesión":
 # =========================================================
 # SEGUIMIENTO
 # =========================================================
+# =========================================================
+# SEGUIMIENTO
+# =========================================================
 
 elif pagina == "Seguimiento":
 
-    st.title(
-        "Seguimiento"
+    st.title("Seguimiento")
+
+    st.caption(
+        "Compara la planificación con la ejecución real "
+        "y analiza la evolución semanal del atleta."
     )
+
+    # =====================================================
+    # LEER HISTORIAL
+    # =====================================================
 
     df_historial = leer_hoja(
         "Historial semanal"
@@ -1915,14 +1926,15 @@ elif pagina == "Seguimiento":
 
         if columna in df_historial.columns:
 
-            df_historial[
-                columna
-            ] = pd.to_numeric(
-                df_historial[
-                    columna
-                ],
+            df_historial[columna] = pd.to_numeric(
+                df_historial[columna],
                 errors="coerce"
             )
+
+
+    # =====================================================
+    # SELECCIÓN DE BLOQUE
+    # =====================================================
 
     bloque_analisis = st.selectbox(
         "Bloque",
@@ -1939,6 +1951,7 @@ elif pagina == "Seguimiento":
 
         st.stop()
 
+
     rangos = {
         1: (1, 13),
         2: (14, 26),
@@ -1950,24 +1963,22 @@ elif pagina == "Seguimiento":
         bloque_analisis
     ]
 
+
     df_bloque = (
         df_historial[
             (
-                df_historial[
-                    "Semana"
-                ]
+                df_historial["Semana"]
                 >= inicio
             )
             &
             (
-                df_historial[
-                    "Semana"
-                ]
+                df_historial["Semana"]
                 <= fin
             )
         ]
         .copy()
     )
+
 
     if df_bloque.empty:
 
@@ -1976,6 +1987,11 @@ elif pagina == "Seguimiento":
         )
 
         st.stop()
+
+
+    # =====================================================
+    # SELECCIÓN DE ALUMNO
+    # =====================================================
 
     alumno = st.selectbox(
         "Alumno",
@@ -1991,6 +2007,7 @@ elif pagina == "Seguimiento":
         placeholder="Selecciona un alumno..."
     )
 
+
     if alumno is None:
 
         st.info(
@@ -1998,6 +2015,11 @@ elif pagina == "Seguimiento":
         )
 
         st.stop()
+
+
+    # =====================================================
+    # FILTRAR ALUMNO
+    # =====================================================
 
     df_alumno = (
         df_bloque[
@@ -2008,7 +2030,13 @@ elif pagina == "Seguimiento":
             ==
             alumno
         ]
+        .copy()
     )
+
+
+    # =====================================================
+    # RESUMEN SEMANAL
+    # =====================================================
 
     resumen = (
         df_alumno
@@ -2017,140 +2045,678 @@ elif pagina == "Seguimiento":
             as_index=False
         )
         .agg({
+
             "Volumen planificado":
                 "sum",
+
             "Volumen real":
                 "sum",
+
             "RPE planificado":
                 "mean",
+
             "RPE real":
                 "mean",
+
             "Carga planificada":
                 "sum",
+
             "Carga real":
                 "sum"
         })
+        .sort_values(
+            "Semana"
+        )
     )
 
-    volumen_plan = (
+
+    # =====================================================
+    # MÉTRICAS DERIVADAS
+    # =====================================================
+
+    resumen[
+        "Volumen %"
+    ] = (
+
+        resumen[
+            "Volumen real"
+        ]
+
+        /
+
+        resumen[
+            "Volumen planificado"
+        ]
+
+        * 100
+
+    )
+
+
+    resumen[
+        "Carga %"
+    ] = (
+
+        resumen[
+            "Carga real"
+        ]
+
+        /
+
+        resumen[
+            "Carga planificada"
+        ]
+
+        * 100
+
+    )
+
+
+    resumen[
+        "Dif. RPE"
+    ] = (
+
+        resumen[
+            "RPE real"
+        ]
+
+        -
+
+        resumen[
+            "RPE planificado"
+        ]
+
+    )
+
+
+    # =====================================================
+    # MÉTRICAS DEL BLOQUE
+    # =====================================================
+
+    volumen_plan_total = (
         resumen[
             "Volumen planificado"
         ]
         .sum()
     )
 
-    carga_plan = (
+
+    volumen_real_total = (
+        resumen[
+            "Volumen real"
+        ]
+        .sum()
+    )
+
+
+    carga_plan_total = (
         resumen[
             "Carga planificada"
         ]
         .sum()
     )
 
-    volumen_pct = (
-        resumen[
-            "Volumen real"
-        ]
-        .sum()
-        /
-        volumen_plan
-        * 100
 
-        if volumen_plan > 0
-
-        else 0
-    )
-
-    carga_pct = (
+    carga_real_total = (
         resumen[
             "Carga real"
         ]
         .sum()
-        /
-        carga_plan
-        * 100
-
-        if carga_plan > 0
-
-        else 0
     )
 
-    rpe_real = (
+
+    if volumen_plan_total > 0:
+
+        volumen_pct_total = (
+            volumen_real_total
+            /
+            volumen_plan_total
+            *
+            100
+        )
+
+    else:
+
+        volumen_pct_total = 0
+
+
+    if carga_plan_total > 0:
+
+        carga_pct_total = (
+            carga_real_total
+            /
+            carga_plan_total
+            *
+            100
+        )
+
+    else:
+
+        carga_pct_total = 0
+
+
+    rpe_plan_total = (
+        resumen[
+            "RPE planificado"
+        ]
+        .mean()
+    )
+
+
+    rpe_real_total = (
         resumen[
             "RPE real"
         ]
         .mean()
     )
 
-    col1, col2, col3 = st.columns(3)
 
-    col1.metric(
-        "Volumen",
-        f"{volumen_pct:.1f}%"
+    dif_rpe_total = (
+        rpe_real_total
+        -
+        rpe_plan_total
     )
 
-    col2.metric(
-        "RPE medio",
-        f"{rpe_real:.1f}"
+
+    sesiones_realizadas = (
+        len(
+            df_alumno
+        )
     )
 
-    col3.metric(
-        "Carga",
-        f"{carga_pct:.1f}%"
+
+    # =====================================================
+    # ÚLTIMA SEMANA
+    # =====================================================
+
+    ultima_semana = (
+        resumen
+        .iloc[-1]
     )
+
+
+    # =====================================================
+    # ENCABEZADO
+    # =====================================================
 
     st.divider()
 
     st.subheader(
-        "Volumen"
+        alumno
     )
 
-    st.line_chart(
-        resumen[
+    st.caption(
+        f"Bloque {bloque_analisis} · "
+        f"Semanas {inicio}–{fin} · "
+        f"{sesiones_realizadas} sesiones registradas"
+    )
+
+
+    # =====================================================
+    # KPIs PRINCIPALES
+    # =====================================================
+
+    col1, col2, col3, col4 = (
+        st.columns(4)
+    )
+
+
+    with col1:
+
+        st.metric(
+            "Volumen cumplido",
+            f"{volumen_pct_total:.1f}%",
+            delta=(
+                f"{volumen_pct_total - 100:+.1f}% "
+                "vs plan"
+            )
+        )
+
+
+    with col2:
+
+        st.metric(
+            "Carga cumplida",
+            f"{carga_pct_total:.1f}%",
+            delta=(
+                f"{carga_pct_total - 100:+.1f}% "
+                "vs plan"
+            )
+        )
+
+
+    with col3:
+
+        st.metric(
+            "RPE medio",
+            f"{rpe_real_total:.1f}",
+            delta=(
+                f"{dif_rpe_total:+.1f} "
+                "vs plan"
+            ),
+            delta_color="inverse"
+        )
+
+
+    with col4:
+
+        st.metric(
+            "Última semana",
+            int(
+                ultima_semana[
+                    "Semana"
+                ]
+            ),
+            delta=(
+                f"{ultima_semana['Carga %']:.1f}% "
+                "carga"
+            )
+        )
+
+
+    # =====================================================
+    # ÚLTIMA SEMANA
+    # =====================================================
+
+    st.divider()
+
+    st.subheader(
+        "Última semana registrada"
+    )
+
+
+    col1, col2, col3 = (
+        st.columns(3)
+    )
+
+
+    col1.metric(
+        "Volumen",
+        f"{ultima_semana['Volumen %']:.1f}%"
+    )
+
+
+    col2.metric(
+        "Carga",
+        f"{ultima_semana['Carga %']:.1f}%"
+    )
+
+
+    col3.metric(
+        "Δ RPE",
+        f"{ultima_semana['Dif. RPE']:+.1f}"
+    )
+
+
+    # =====================================================
+    # TABS
+    # =====================================================
+
+    st.divider()
+
+    tab_volumen, tab_carga, tab_rpe, tab_tabla = (
+        st.tabs(
+            [
+                "Volumen",
+                "Carga",
+                "RPE",
+                "Datos semanales"
+            ]
+        )
+    )
+
+
+    # =====================================================
+    # GRÁFICA VOLUMEN
+    # =====================================================
+
+    with tab_volumen:
+
+        st.subheader(
+            "Volumen planificado vs real"
+        )
+
+
+        volumen_long = (
+            resumen[
+                [
+                    "Semana",
+                    "Volumen planificado",
+                    "Volumen real"
+                ]
+            ]
+            .melt(
+                id_vars="Semana",
+                var_name="Tipo",
+                value_name="Volumen"
+            )
+        )
+
+
+        grafica_volumen = (
+
+            alt.Chart(
+                volumen_long
+            )
+
+            .mark_line(
+                point=True
+            )
+
+            .encode(
+
+                x=alt.X(
+                    "Semana:Q",
+                    title="Semana"
+                ),
+
+                y=alt.Y(
+                    "Volumen:Q",
+                    title="Volumen"
+                ),
+
+                color=alt.Color(
+                    "Tipo:N",
+                    title=""
+                ),
+
+                tooltip=[
+                    alt.Tooltip(
+                        "Semana:Q",
+                        title="Semana"
+                    ),
+                    alt.Tooltip(
+                        "Tipo:N",
+                        title=""
+                    ),
+                    alt.Tooltip(
+                        "Volumen:Q",
+                        title="Volumen",
+                        format=".0f"
+                    )
+                ]
+            )
+
+            .properties(
+                height=400
+            )
+
+            .interactive()
+
+        )
+
+
+        st.altair_chart(
+            grafica_volumen,
+            use_container_width=True
+        )
+
+
+        st.caption(
+            "El objetivo es observar si el volumen real "
+            "se mantiene cerca de la planificación a lo largo "
+            "del bloque."
+        )
+
+
+    # =====================================================
+    # GRÁFICA CARGA
+    # =====================================================
+
+    with tab_carga:
+
+        st.subheader(
+            "Carga planificada vs real"
+        )
+
+
+        carga_long = (
+            resumen[
+                [
+                    "Semana",
+                    "Carga planificada",
+                    "Carga real"
+                ]
+            ]
+            .melt(
+                id_vars="Semana",
+                var_name="Tipo",
+                value_name="Carga"
+            )
+        )
+
+
+        grafica_carga = (
+
+            alt.Chart(
+                carga_long
+            )
+
+            .mark_line(
+                point=True
+            )
+
+            .encode(
+
+                x=alt.X(
+                    "Semana:Q",
+                    title="Semana"
+                ),
+
+                y=alt.Y(
+                    "Carga:Q",
+                    title="Carga"
+                ),
+
+                color=alt.Color(
+                    "Tipo:N",
+                    title=""
+                ),
+
+                tooltip=[
+                    alt.Tooltip(
+                        "Semana:Q",
+                        title="Semana"
+                    ),
+                    alt.Tooltip(
+                        "Tipo:N",
+                        title=""
+                    ),
+                    alt.Tooltip(
+                        "Carga:Q",
+                        title="Carga",
+                        format=".0f"
+                    )
+                ]
+            )
+
+            .properties(
+                height=400
+            )
+
+            .interactive()
+
+        )
+
+
+        st.altair_chart(
+            grafica_carga,
+            use_container_width=True
+        )
+
+
+        st.caption(
+            "La carga combina el volumen realizado "
+            "con el RPE reportado."
+        )
+
+
+    # =====================================================
+    # GRÁFICA RPE
+    # =====================================================
+
+    with tab_rpe:
+
+        st.subheader(
+            "RPE planificado vs real"
+        )
+
+
+        rpe_long = (
+            resumen[
+                [
+                    "Semana",
+                    "RPE planificado",
+                    "RPE real"
+                ]
+            ]
+            .melt(
+                id_vars="Semana",
+                var_name="Tipo",
+                value_name="RPE"
+            )
+        )
+
+
+        grafica_rpe = (
+
+            alt.Chart(
+                rpe_long
+            )
+
+            .mark_line(
+                point=True
+            )
+
+            .encode(
+
+                x=alt.X(
+                    "Semana:Q",
+                    title="Semana"
+                ),
+
+                y=alt.Y(
+                    "RPE:Q",
+                    title="RPE",
+                    scale=alt.Scale(
+                        domain=[
+                            0,
+                            10
+                        ]
+                    )
+                ),
+
+                color=alt.Color(
+                    "Tipo:N",
+                    title=""
+                ),
+
+                tooltip=[
+                    alt.Tooltip(
+                        "Semana:Q",
+                        title="Semana"
+                    ),
+                    alt.Tooltip(
+                        "Tipo:N",
+                        title=""
+                    ),
+                    alt.Tooltip(
+                        "RPE:Q",
+                        title="RPE",
+                        format=".1f"
+                    )
+                ]
+            )
+
+            .properties(
+                height=400
+            )
+
+            .interactive()
+
+        )
+
+
+        st.altair_chart(
+            grafica_rpe,
+            use_container_width=True
+        )
+
+
+        st.caption(
+            "Una separación creciente entre RPE planificado "
+            "y RPE real indica que la respuesta del atleta "
+            "está cambiando respecto al plan."
+        )
+
+
+    # =====================================================
+    # TABLA SEMANAL
+    # =====================================================
+
+    with tab_tabla:
+
+        st.subheader(
+            "Cumplimiento semanal"
+        )
+
+
+        tabla = resumen[
             [
                 "Semana",
                 "Volumen planificado",
-                "Volumen real"
-            ]
-        ]
-        .set_index(
-            "Semana"
-        )
-    )
-
-    st.subheader(
-        "RPE"
-    )
-
-    st.line_chart(
-        resumen[
-            [
-                "Semana",
+                "Volumen real",
+                "Volumen %",
                 "RPE planificado",
-                "RPE real"
-            ]
-        ]
-        .set_index(
-            "Semana"
-        )
-    )
-
-    st.subheader(
-        "Carga"
-    )
-
-    st.line_chart(
-        resumen[
-            [
-                "Semana",
+                "RPE real",
+                "Dif. RPE",
                 "Carga planificada",
-                "Carga real"
+                "Carga real",
+                "Carga %"
             ]
-        ]
-        .set_index(
-            "Semana"
-        )
-    )
+        ].copy()
 
+
+        tabla[
+            "Volumen %"
+        ] = tabla[
+            "Volumen %"
+        ].round(1)
+
+
+        tabla[
+            "Carga %"
+        ] = tabla[
+            "Carga %"
+        ].round(1)
+
+
+        tabla[
+            "RPE planificado"
+        ] = tabla[
+            "RPE planificado"
+        ].round(1)
+
+
+        tabla[
+            "RPE real"
+        ] = tabla[
+            "RPE real"
+        ].round(1)
+
+
+        tabla[
+            "Dif. RPE"
+        ] = tabla[
+            "Dif. RPE"
+        ].round(1)
+
+
+        st.dataframe(
+            tabla,
+            use_container_width=True,
+            hide_index=True
+        )
 
 # =========================================================
 # ALERTAS
