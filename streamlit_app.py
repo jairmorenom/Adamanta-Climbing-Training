@@ -1327,6 +1327,7 @@ pagina = st.sidebar.radio(
         "Planear sesión",
         "Registrar sesión",
         "Seguimiento",
+        "Vista grupo",
         "Alertas"
     ]
 )
@@ -3029,7 +3030,734 @@ elif pagina == "Seguimiento":
             hide_index=True
         )
 
+# =========================================================
+# VISTA GRUPO
+# =========================================================
 
+elif pagina == "Vista grupo":
+
+    st.title(
+        "Vista del grupo"
+    )
+
+    st.caption(
+        "Detecta rápidamente patrones de carga, volumen y RPE "
+        "entre todos los atletas."
+    )
+
+    # =====================================================
+    # LEER HISTORIAL
+    # =====================================================
+
+    df_grupo = leer_hoja(
+        "Historial semanal"
+    )
+
+    columnas_numericas = [
+        "Semana",
+        "Sesión",
+        "Volumen planificado",
+        "Volumen real",
+        "RPE planificado",
+        "RPE real",
+        "Carga planificada",
+        "Carga real"
+    ]
+
+    for columna in columnas_numericas:
+
+        if columna in df_grupo.columns:
+
+            df_grupo[columna] = pd.to_numeric(
+                df_grupo[columna],
+                errors="coerce"
+            )
+
+    # =====================================================
+    # SELECCIONAR BLOQUE
+    # =====================================================
+
+    bloque_grupo = st.selectbox(
+        "Bloque",
+        [1, 2, 3, 4],
+        index=None,
+        placeholder="Selecciona un bloque...",
+        key="bloque_grupo"
+    )
+
+    if bloque_grupo is None:
+
+        st.info(
+            "Selecciona un bloque para analizar al grupo."
+        )
+
+        st.stop()
+
+    rangos = {
+        1: (1, 13),
+        2: (14, 26),
+        3: (27, 39),
+        4: (40, 52)
+    }
+
+    inicio, fin = rangos[
+        bloque_grupo
+    ]
+
+    df_grupo = (
+        df_grupo[
+            (
+                df_grupo["Semana"]
+                >= inicio
+            )
+            &
+            (
+                df_grupo["Semana"]
+                <= fin
+            )
+        ]
+        .copy()
+    )
+
+    if df_grupo.empty:
+
+        st.info(
+            "No existen registros para este bloque."
+        )
+
+        st.stop()
+
+    # =====================================================
+    # LIMPIAR
+    # =====================================================
+
+    df_grupo = df_grupo.dropna(
+        subset=[
+            "Alumno",
+            "Semana",
+            "Volumen planificado",
+            "Volumen real",
+            "RPE planificado",
+            "RPE real",
+            "Carga planificada",
+            "Carga real"
+        ]
+    )
+
+    df_grupo["Alumno"] = (
+        df_grupo["Alumno"]
+        .astype(str)
+        .str.strip()
+    )
+
+    # =====================================================
+    # RESUMEN SEMANAL POR ATLETA
+    # =====================================================
+
+    resumen_grupo = (
+        df_grupo
+        .groupby(
+            [
+                "Alumno",
+                "Semana"
+            ],
+            as_index=False
+        )
+        .agg({
+            "Volumen planificado": "sum",
+            "Volumen real": "sum",
+            "RPE planificado": "mean",
+            "RPE real": "mean",
+            "Carga planificada": "sum",
+            "Carga real": "sum",
+            "Sesión": "count"
+        })
+        .rename(
+            columns={
+                "Sesión": "Sesiones registradas"
+            }
+        )
+    )
+
+    # =====================================================
+    # MÉTRICAS
+    # =====================================================
+
+    resumen_grupo["Volumen %"] = (
+        resumen_grupo["Volumen real"]
+        /
+        resumen_grupo["Volumen planificado"]
+        *
+        100
+    )
+
+    resumen_grupo["Carga %"] = (
+        resumen_grupo["Carga real"]
+        /
+        resumen_grupo["Carga planificada"]
+        *
+        100
+    )
+
+    resumen_grupo["Dif. RPE"] = (
+        resumen_grupo["RPE real"]
+        -
+        resumen_grupo["RPE planificado"]
+    )
+
+    resumen_grupo = resumen_grupo.replace(
+        [
+            float("inf"),
+            float("-inf")
+        ],
+        pd.NA
+    )
+
+    resumen_grupo = resumen_grupo.dropna(
+        subset=[
+            "Volumen %",
+            "Carga %",
+            "Dif. RPE"
+        ]
+    )
+
+    # =====================================================
+    # NIVEL DE ATENCIÓN
+    # =====================================================
+
+    resumen_grupo["Nivel"] = resumen_grupo.apply(
+        lambda fila: clasificar_estado(
+            fila["Volumen %"],
+            fila["Carga %"],
+            fila["Dif. RPE"]
+        ),
+        axis=1
+    )
+
+    mapa_nivel = {
+        "OK": 0,
+        "MONITOREAR": 1,
+        "REVISAR": 2,
+        "ALTA": 3
+    }
+
+    resumen_grupo[
+        "Nivel numérico"
+    ] = (
+        resumen_grupo[
+            "Nivel"
+        ]
+        .map(
+            mapa_nivel
+        )
+    )
+
+    resumen_grupo[
+        "Nivel corto"
+    ] = (
+        resumen_grupo[
+            "Nivel"
+        ]
+        .replace({
+            "MONITOREAR": "MON",
+            "REVISAR": "REV"
+        })
+    )
+
+    # =====================================================
+    # SEMANA MÁS RECIENTE
+    # =====================================================
+
+    semana_reciente = int(
+        resumen_grupo[
+            "Semana"
+        ]
+        .max()
+    )
+
+    ultima_grupo = (
+        resumen_grupo[
+            resumen_grupo[
+                "Semana"
+            ]
+            ==
+            semana_reciente
+        ]
+        .copy()
+    )
+
+    # =====================================================
+    # KPIs DEL GRUPO
+    # =====================================================
+
+    atletas_registrados = (
+        resumen_grupo[
+            "Alumno"
+        ]
+        .nunique()
+    )
+
+    atletas_atencion = (
+        ultima_grupo[
+            ultima_grupo[
+                "Nivel"
+            ]
+            .isin(
+                [
+                    "MONITOREAR",
+                    "REVISAR",
+                    "ALTA"
+                ]
+            )
+        ][
+            "Alumno"
+        ]
+        .nunique()
+    )
+
+    carga_media = (
+        ultima_grupo[
+            "Carga %"
+        ]
+        .mean()
+    )
+
+    rpe_diff_media = (
+        ultima_grupo[
+            "Dif. RPE"
+        ]
+        .mean()
+    )
+
+    st.divider()
+
+    st.subheader(
+        f"Semana más reciente: {semana_reciente}"
+    )
+
+    col1, col2, col3, col4 = (
+        st.columns(4)
+    )
+
+    col1.metric(
+        "Atletas registrados",
+        atletas_registrados
+    )
+
+    col2.metric(
+        "Requieren atención",
+        atletas_atencion
+    )
+
+    col3.metric(
+        "Carga media",
+        f"{carga_media:.1f}%"
+    )
+
+    col4.metric(
+        "Δ RPE medio",
+        f"{rpe_diff_media:+.1f}"
+    )
+
+    # =====================================================
+    # MÉTRICA DEL HEATMAP
+    # =====================================================
+
+    st.divider()
+
+    st.subheader(
+        "Heatmap del grupo"
+    )
+
+    metrica_heatmap = st.selectbox(
+        "Variable a visualizar",
+        [
+            "Nivel de atención",
+            "Carga %",
+            "Volumen %",
+            "Δ RPE"
+        ],
+        index=None,
+        placeholder="Selecciona una métrica...",
+        key="metrica_heatmap"
+    )
+
+    if metrica_heatmap is None:
+
+        st.info(
+            "Selecciona una métrica para generar el heatmap."
+        )
+
+        st.stop()
+
+    # =====================================================
+    # HEATMAP — NIVEL
+    # =====================================================
+
+    if metrica_heatmap == "Nivel de atención":
+
+        heatmap = (
+            alt.Chart(
+                resumen_grupo
+            )
+            .mark_rect(
+                cornerRadius=4
+            )
+            .encode(
+
+                x=alt.X(
+                    "Semana:O",
+                    title="Semana"
+                ),
+
+                y=alt.Y(
+                    "Alumno:N",
+                    title="",
+                    sort="ascending"
+                ),
+
+                color=alt.Color(
+                    "Nivel:N",
+                    title="Nivel",
+                    sort=[
+                        "OK",
+                        "MONITOREAR",
+                        "REVISAR",
+                        "ALTA"
+                    ]
+                ),
+
+                tooltip=[
+                    alt.Tooltip(
+                        "Alumno:N",
+                        title="Atleta"
+                    ),
+
+                    alt.Tooltip(
+                        "Semana:O",
+                        title="Semana"
+                    ),
+
+                    alt.Tooltip(
+                        "Nivel:N",
+                        title="Nivel"
+                    ),
+
+                    alt.Tooltip(
+                        "Volumen %:Q",
+                        title="Volumen",
+                        format=".1f"
+                    ),
+
+                    alt.Tooltip(
+                        "Carga %:Q",
+                        title="Carga",
+                        format=".1f"
+                    ),
+
+                    alt.Tooltip(
+                        "RPE real:Q",
+                        title="RPE real",
+                        format=".1f"
+                    ),
+
+                    alt.Tooltip(
+                        "Dif. RPE:Q",
+                        title="Δ RPE",
+                        format="+.1f"
+                    ),
+
+                    alt.Tooltip(
+                        "Sesiones registradas:Q",
+                        title="Sesiones"
+                    )
+                ]
+            )
+            .properties(
+                height=max(
+                    250,
+                    atletas_registrados * 45
+                )
+            )
+        )
+
+        texto = (
+            alt.Chart(
+                resumen_grupo
+            )
+            .mark_text(
+                fontSize=11
+            )
+            .encode(
+
+                x="Semana:O",
+
+                y=alt.Y(
+                    "Alumno:N",
+                    sort="ascending"
+                ),
+
+                text="Nivel corto:N"
+            )
+        )
+
+        grafica_final = (
+            heatmap
+            +
+            texto
+        )
+
+    # =====================================================
+    # HEATMAP — CARGA
+    # =====================================================
+
+    elif metrica_heatmap == "Carga %":
+
+        grafica_final = (
+            alt.Chart(
+                resumen_grupo
+            )
+            .mark_rect(
+                cornerRadius=4
+            )
+            .encode(
+
+                x=alt.X(
+                    "Semana:O",
+                    title="Semana"
+                ),
+
+                y=alt.Y(
+                    "Alumno:N",
+                    title="",
+                    sort="ascending"
+                ),
+
+                color=alt.Color(
+                    "Carga %:Q",
+                    title="Carga %"
+                ),
+
+                tooltip=[
+                    "Alumno:N",
+                    "Semana:O",
+
+                    alt.Tooltip(
+                        "Carga %:Q",
+                        format=".1f"
+                    ),
+
+                    alt.Tooltip(
+                        "Volumen %:Q",
+                        format=".1f"
+                    ),
+
+                    alt.Tooltip(
+                        "Dif. RPE:Q",
+                        format="+.1f"
+                    ),
+
+                    "Nivel:N"
+                ]
+            )
+            .properties(
+                height=max(
+                    250,
+                    atletas_registrados * 45
+                )
+            )
+        )
+
+    # =====================================================
+    # HEATMAP — VOLUMEN
+    # =====================================================
+
+    elif metrica_heatmap == "Volumen %":
+
+        grafica_final = (
+            alt.Chart(
+                resumen_grupo
+            )
+            .mark_rect(
+                cornerRadius=4
+            )
+            .encode(
+
+                x=alt.X(
+                    "Semana:O",
+                    title="Semana"
+                ),
+
+                y=alt.Y(
+                    "Alumno:N",
+                    title="",
+                    sort="ascending"
+                ),
+
+                color=alt.Color(
+                    "Volumen %:Q",
+                    title="Volumen %"
+                ),
+
+                tooltip=[
+                    "Alumno:N",
+                    "Semana:O",
+
+                    alt.Tooltip(
+                        "Volumen %:Q",
+                        format=".1f"
+                    ),
+
+                    alt.Tooltip(
+                        "Carga %:Q",
+                        format=".1f"
+                    ),
+
+                    alt.Tooltip(
+                        "Dif. RPE:Q",
+                        format="+.1f"
+                    ),
+
+                    "Nivel:N"
+                ]
+            )
+            .properties(
+                height=max(
+                    250,
+                    atletas_registrados * 45
+                )
+            )
+        )
+
+    # =====================================================
+    # HEATMAP — DIFERENCIA RPE
+    # =====================================================
+
+    else:
+
+        grafica_final = (
+            alt.Chart(
+                resumen_grupo
+            )
+            .mark_rect(
+                cornerRadius=4
+            )
+            .encode(
+
+                x=alt.X(
+                    "Semana:O",
+                    title="Semana"
+                ),
+
+                y=alt.Y(
+                    "Alumno:N",
+                    title="",
+                    sort="ascending"
+                ),
+
+                color=alt.Color(
+                    "Dif. RPE:Q",
+                    title="Δ RPE"
+                ),
+
+                tooltip=[
+                    "Alumno:N",
+                    "Semana:O",
+
+                    alt.Tooltip(
+                        "RPE planificado:Q",
+                        format=".1f"
+                    ),
+
+                    alt.Tooltip(
+                        "RPE real:Q",
+                        format=".1f"
+                    ),
+
+                    alt.Tooltip(
+                        "Dif. RPE:Q",
+                        format="+.1f"
+                    ),
+
+                    alt.Tooltip(
+                        "Carga %:Q",
+                        format=".1f"
+                    ),
+
+                    "Nivel:N"
+                ]
+            )
+            .properties(
+                height=max(
+                    250,
+                    atletas_registrados * 45
+                )
+            )
+        )
+
+    st.altair_chart(
+        grafica_final,
+        use_container_width=True
+    )
+
+    # =====================================================
+    # PRIORIDADES DEL COACH
+    # =====================================================
+
+    st.divider()
+
+    st.subheader(
+        "Prioridades del coach"
+    )
+
+    prioridad = (
+        ultima_grupo
+        .sort_values(
+            [
+                "Nivel numérico",
+                "Dif. RPE"
+            ],
+            ascending=[
+                False,
+                False
+            ]
+        )
+    )
+
+    for _, fila in prioridad.iterrows():
+
+        nivel = fila["Nivel"]
+
+        texto = (
+            f"**{fila['Alumno']}** · "
+            f"Carga {fila['Carga %']:.1f}% · "
+            f"Volumen {fila['Volumen %']:.1f}% · "
+            f"ΔRPE {fila['Dif. RPE']:+.1f}"
+        )
+
+        if nivel == "ALTA":
+
+            st.error(
+                f"🔴 {texto}"
+            )
+
+        elif nivel == "REVISAR":
+
+            st.warning(
+                f"🟠 {texto}"
+            )
+
+        elif nivel == "MONITOREAR":
+
+            st.info(
+                f"🟡 {texto}"
+            )
+
+        else:
+
+            st.success(
+                f"✅ {texto}"
+            )
 # =========================================================
 # ALERTAS
 # =========================================================
