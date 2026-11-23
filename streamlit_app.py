@@ -1,11 +1,13 @@
 import streamlit as st
 import pandas as pd
 import random
+import urllib.parse
+import matplotlib.pyplot as plt
 
 
-# ======================================
-# CONFIGURACIÓN GENERAL
-# ======================================
+# =========================================================
+# CONFIGURACIÓN
+# =========================================================
 
 st.set_page_config(
     page_title="Adamanta Training",
@@ -14,348 +16,65 @@ st.set_page_config(
 )
 
 
-# ======================================
-# DATOS DE PRUEBA
-# ======================================
+# =========================================================
+# GOOGLE SHEET
+# =========================================================
+# Pega aquí el ID de tu Google Sheet.
+#
+# Ejemplo:
+# https://docs.google.com/spreadsheets/d/ABC123XYZ/edit
+#
+# SPREADSHEET_ID = "ABC123XYZ"
 
-datos = pd.DataFrame({
-    "Alumno": ["Emi", "Juan Cruz", "Marina"],
-    "Volumen %": [83.3, 83.3, 83.3],
-    "RPE planificado": [6.3, 6.3, 6.3],
-    "RPE real": [7.0, 7.0, 6.0],
-    "Carga %": [92.1, 92.1, 78.9],
-    "Nivel": [
-        "MONITOREAR",
-        "MONITOREAR",
-        "MONITOREAR"
-    ],
-    "Estado": [
-        "Volumen ligeramente bajo",
-        "Volumen ligeramente bajo",
-        "Volumen ligeramente bajo | Carga ligeramente baja"
-    ],
-    "Recomendación": [
-        "Subir ligeramente el volumen en la próxima sesión",
-        "Subir ligeramente el volumen en la próxima sesión",
-        "Subir ligeramente el volumen en la próxima sesión"
-    ]
-})
+SPREADSHEET_ID = "PEGA_AQUI_TU_ID"
 
 
-# ======================================
-# BASE DE EJERCICIOS
-# ======================================
+# =========================================================
+# NOMBRES DE HOJAS
+# =========================================================
 
-ejercicios_por_bloque = {
+HOJAS_EJERCICIOS = {
+    1: "Lista de ejercicios Bloque 1",
+    2: "Lista de ejercicios bloque 2",
+    3: "Lista de ejercicios bloque 3",
+    4: "Lista de ejercicios bloque 4",
+}
 
-    # ==================================
-    # BLOQUE 1
-    # ==================================
-
-    1: {
-
-        "Corrección de técnica": [
-            "Pies silenciosos",
-            "Talones + empeines",
-            "Cambios de pies",
-            "Centro de masas / dirección corporal",
-            "Movimiento dinámico aislado → secuencia"
-        ],
-
-        "Habilidades técnicas": [
-            "Puntas + precisión",
-            "Talón / empeine aplicado",
-            "Cruces + rotación de cadera",
-            "Pies altos + movilidad aplicada",
-            "Combinación de habilidades"
-        ],
-
-        "Coordinación": [
-            "Cambio de pies + ritmo",
-            "Coordinación mano-pie",
-            "Deadpoint controlado",
-            "Secuencia dinámica de pies",
-            "Coordinación combinada"
-        ],
-
-        "Proyección": [
-            "Proyecto corto técnico",
-            "Trabajo por secciones",
-            "Proyecto en desplome",
-            "Beta limitada",
-            "Proyecto completo"
-        ],
-
-        "Flash or Trash": [
-            "Flash or Trash clásico",
-            "Visualización + ejecución",
-            "Flash por estilos",
-            "Intentos limitados",
-            "Flash bajo presión"
-        ],
-
-        "Movilidad aplicada": [
-            "Pies altos",
-            "Apertura de cadera",
-            "Cruces amplios",
-            "Movilidad en slab",
-            "Secuencia de movilidad combinada"
-        ],
-
-        "Dinámicos": [
-            "Deadpoint a una mano",
-            "Salto controlado",
-            "Coordinación de pies dinámica",
-            "Doble movimiento",
-            "Secuencia dinámica combinada"
-        ],
-
-        "Volumen / Endurance técnico": [
-            "Circuito de volumen técnico",
-            "Travesía continua",
-            "Boulders encadenados",
-            "Endurance por estilos",
-            "Secuencia larga en spray wall"
-        ]
-    },
-
-
-    # ==================================
-    # BLOQUE 2
-    # ==================================
-
-    2: {
-
-        "Volumen técnico": [
-            "Circuito de boulders por estilos",
-            "Volumen progresivo",
-            "Travesía técnica larga",
-            "Boulders encadenados",
-            "Volumen en spray wall"
-        ],
-
-        "Fuerza general aplicada": [
-            "Tracción + core en muro",
-            "Boulders de tensión corporal",
-            "Fuerza de piernas aplicada",
-            "Movimientos largos controlados",
-            "Circuito de fuerza general"
-        ],
-
-        "Coordinación": [
-            "Coordinación mano-pie",
-            "Cambios de pies con ritmo",
-            "Secuencias cruzadas",
-            "Coordinación en desplome",
-            "Coordinación combinada en spray wall"
-        ],
-
-        "Dinámicos / potencia": [
-            "Deadpoint potente",
-            "Salto a dos manos",
-            "Dyno con coordinación de pies",
-            "Movimientos largos explosivos",
-            "Secuencia dinámica combinada"
-        ],
-
-        "Habilidades técnicas": [
-            "Puntas + precisión",
-            "Talón + empeine aplicados",
-            "Cruces + rotación de cadera",
-            "Pies altos + cambios de dirección",
-            "Combinación técnica en spray wall"
-        ],
-
-        "Endurance / Power endurance técnico": [
-            "4×4 técnico",
-            "Travesía por tiempo",
-            "Boulders encadenados",
-            "Secuencia larga en spray wall",
-            "Endurance por estilos"
-        ],
-
-        "Corrección de técnica": [
-            "Pies silenciosos",
-            "Corrección de talón / empeine",
-            "Centro de masas",
-            "Corrección de secuencia",
-            "Mismo boulder, nueva beta"
-        ],
-
-        "Movilidad aplicada": [
-            "Pies altos + apertura de cadera",
-            "Movilidad en slab",
-            "Cruces amplios",
-            "Rotaciones + cambio de dirección",
-            "Secuencia de movilidad combinada"
-        ]
-    },
-
-
-    # ==================================
-    # BLOQUE 3
-    # ==================================
-
-    3: {
-
-        "Flash or Trash": [
-            "Flash or Trash clásico",
-            "Flash por estilos",
-            "Visualización completa",
-            "Beta después del fallo",
-            "Flash bajo presión"
-        ],
-
-        "Simulación de competencia": [
-            "Mini ronda 4 boulders",
-            "Ronda por estilos",
-            "Simulación con aislamiento",
-            "Intentos con tiempo",
-            "Final 4×4 adaptada"
-        ],
-
-        "Coordinación": [
-            "Coordinación de pies",
-            "Mano-pie avanzada",
-            "Cambios de ritmo",
-            "Coordinación en desplome",
-            "Secuencia combinada"
-        ],
-
-        "Habilidades técnicas": [
-            "Talón + empeine avanzado",
-            "Cruces y rotaciones",
-            "Pies altos complejos",
-            "Cambio de dirección",
-            "Combinación técnica avanzada"
-        ],
-
-        "Corrección de técnica": [
-            "Video + corrección",
-            "Movimiento aislado",
-            "Dos betas diferentes",
-            "Corrección bajo fatiga",
-            "Coach observa, atleta analiza"
-        ],
-
-        "Dinámicos": [
-            "Deadpoint avanzado",
-            "Dyno con pies",
-            "Doble coordinación",
-            "Dinámico con cambio de dirección",
-            "Secuencia dinámica competitiva"
-        ],
-
-        "Proyección": [
-            "Proyecto competitivo",
-            "Crux primero",
-            "Proyecto con intentos limitados",
-            "Proyecto por secciones",
-            "Proyecto completo con análisis"
-        ],
-
-        "Endurance técnico": [
-            "Boulders consecutivos",
-            "Travesía técnica",
-            "Circuito competitivo",
-            "Secuencia larga",
-            "Calidad bajo fatiga"
-        ],
-
-        "Movilidad aplicada": [
-            "Pies altos competitivos",
-            "Apertura de cadera en posiciones complejas",
-            "Cruces amplios + rotación",
-            "Movilidad en slab técnico",
-            "Secuencia combinada de movilidad"
-        ]
-    },
-
-
-    # ==================================
-    # BLOQUE 4
-    # ==================================
-
-    4: {
-
-        "Simulación de competencia": [
-            "Ronda 4 boulders",
-            "Final 4×4 adaptada",
-            "Simulación con aislamiento",
-            "Competencia por estilos",
-            "Ronda con estrategia"
-        ],
-
-        "Corrección de técnica": [
-            "Video + corrección",
-            "Error aislado",
-            "Comparación de betas",
-            "Corrección en roca simulada",
-            "Autocorrección"
-        ],
-
-        "Proyección": [
-            "Proyecto estilo roca",
-            "Crux primero",
-            "Proyecto por secciones",
-            "Intentos limitados",
-            "Proyecto completo"
-        ],
-
-        "Flash or Trash": [
-            "Flash competitivo",
-            "Flash estilo roca",
-            "Flash por estilos",
-            "Beta después del fallo",
-            "Un intento"
-        ],
-
-        "Habilidades técnicas": [
-            "Talones y empeines complejos",
-            "Pies pequeños",
-            "Rotaciones y banderas",
-            "Compresión",
-            "Combinación estilo roca"
-        ],
-
-        "Coordinación": [
-            "Mano-pie",
-            "Cambios rápidos de pies",
-            "Cambio de ritmo",
-            "Coordinación en desplome",
-            "Secuencia combinada"
-        ],
-
-        "Dinámicos": [
-            "Deadpoint",
-            "Dyno controlado",
-            "Doble movimiento",
-            "Dinámico lateral",
-            "Secuencia dinámica"
-        ],
-
-        "Endurance técnico": [
-            "Boulders consecutivos",
-            "Travesía estilo roca",
-            "Secuencia larga",
-            "Endurance por estilos",
-            "Calidad bajo fatiga"
-        ],
-
-        "Movilidad aplicada": [
-            "Pies altos",
-            "Apertura de cadera",
-            "Cruces amplios",
-            "Slab de movilidad",
-            "Movilidad estilo roca"
-        ]
-    }
+HOJAS_CARGA = {
+    1: "Carga de ejercicios Bloque 1",
+    2: "Carga de ejercicios Bloque 2",
+    3: "Carga de ejercicios Bloque 3",
+    4: "Carga de ejercicios Bloque 4",
 }
 
 
-# ======================================
-# FUNCIÓN PARA OBTENER BLOQUE
-# ======================================
+# =========================================================
+# FUNCIONES GOOGLE SHEETS
+# =========================================================
+
+@st.cache_data(ttl=60)
+def leer_hoja(nombre_hoja):
+
+    nombre_codificado = urllib.parse.quote(
+        nombre_hoja
+    )
+
+    url = (
+        f"https://docs.google.com/spreadsheets/d/"
+        f"{SPREADSHEET_ID}/gviz/tq?"
+        f"tqx=out:csv&sheet={nombre_codificado}"
+    )
+
+    df = pd.read_csv(url)
+
+    df.columns = (
+        df.columns
+        .astype(str)
+        .str.strip()
+    )
+
+    return df
+
 
 def obtener_bloque(semana):
 
@@ -372,11 +91,65 @@ def obtener_bloque(semana):
         return 4, "Competencia + transición a roca"
 
 
-# ======================================
+def limpiar_texto(valor):
+
+    if pd.isna(valor):
+        return ""
+
+    return str(valor).strip()
+
+
+# =========================================================
+# LEER DATOS PRINCIPALES
+# =========================================================
+
+try:
+
+    df_distribucion = leer_hoja(
+        "Distribucion semanal"
+    )
+
+    df_alumnos = leer_hoja(
+        "Alumnos"
+    )
+
+    conexion_ok = True
+
+except Exception as error:
+
+    conexion_ok = False
+
+    st.error(
+        "No se pudo leer la base de datos."
+    )
+
+    st.code(str(error))
+
+    st.info(
+        "Revisa que el Google Sheet esté compartido como "
+        "'Cualquier persona con el enlace → Lector' y que "
+        "SPREADSHEET_ID sea correcto."
+    )
+
+
+# =========================================================
 # SIDEBAR
-# ======================================
+# =========================================================
 
 st.sidebar.title("ADAMANTA")
+
+if conexion_ok:
+
+    st.sidebar.success(
+        "Base de datos conectada"
+    )
+
+else:
+
+    st.sidebar.error(
+        "Sin conexión"
+    )
+
 
 pagina = st.sidebar.radio(
     "Navegación",
@@ -390,87 +163,119 @@ pagina = st.sidebar.radio(
 )
 
 
-# ======================================
+# =========================================================
+# DETENER SI NO HAY CONEXIÓN
+# =========================================================
+
+if not conexion_ok:
+
+    st.stop()
+
+
+# =========================================================
+# LIMPIAR DISTRIBUCIÓN SEMANAL
+# =========================================================
+
+df_distribucion["Semana"] = pd.to_numeric(
+    df_distribucion["Semana"],
+    errors="coerce"
+)
+
+
+# =========================================================
+# LISTA DE ALUMNOS
+# =========================================================
+
+if "Nombre" in df_alumnos.columns:
+
+    alumnos = (
+        df_alumnos["Nombre"]
+        .dropna()
+        .astype(str)
+        .str.strip()
+        .tolist()
+    )
+
+else:
+
+    alumnos = (
+        df_alumnos.iloc[:, 0]
+        .dropna()
+        .astype(str)
+        .str.strip()
+        .tolist()
+    )
+
+
+# =========================================================
 # INICIO
-# ======================================
+# =========================================================
 
 if pagina == "Inicio":
 
     st.title("ADAMANTA")
+
     st.subheader(
-        "Sistema de planificación y seguimiento de entrenamiento"
+        "Sistema de planificación y seguimiento"
+    )
+
+    st.caption(
+        "Planificación · Carga · Seguimiento · Alertas"
     )
 
     st.divider()
 
-    col1, col2, col3, col4 = st.columns(4)
 
-    col1.metric(
-        "Bloque actual",
-        "4"
-    )
-
-    col2.metric(
-        "Semana",
-        "47"
-    )
-
-    col3.metric(
-        "Sesiones / semana",
-        "4"
-    )
-
-    col4.metric(
-        "Alumnos activos",
-        len(datos)
-    )
-
-    st.divider()
-
-    st.subheader(
-        "Resumen del grupo"
-    )
+    # -----------------------------------------------------
+    # DATOS GENERALES
+    # -----------------------------------------------------
 
     col1, col2, col3 = st.columns(3)
 
     col1.metric(
-        "Volumen medio",
-        f"{datos['Volumen %'].mean():.1f}%"
+        "Semanas programadas",
+        52
     )
 
     col2.metric(
-        "RPE medio",
-        f"{datos['RPE real'].mean():.1f}"
+        "Sesiones por semana",
+        4
     )
 
     col3.metric(
-        "Carga media",
-        f"{datos['Carga %'].mean():.1f}%"
+        "Alumnos",
+        len(alumnos)
     )
+
 
     st.divider()
 
     st.subheader(
-        "Estado actual"
+        "Alumnos"
     )
 
-    st.dataframe(
-        datos[
-            [
-                "Alumno",
-                "Volumen %",
-                "RPE real",
-                "Carga %",
-                "Nivel"
-            ]
-        ],
-        use_container_width=True
-    )
+    if alumnos:
+
+        df_lista_alumnos = pd.DataFrame({
+            "Alumno": alumnos
+        })
+
+        st.dataframe(
+            df_lista_alumnos,
+            use_container_width=True,
+            hide_index=True
+        )
+
+    else:
+
+        st.warning(
+            "No hay alumnos registrados."
+        )
 
 
-# ======================================
+# =========================================================
 # PLANEAR SESIÓN
-# ======================================
+# =========================================================
 
 elif pagina == "Planear sesión":
 
@@ -479,13 +284,14 @@ elif pagina == "Planear sesión":
     )
 
     st.caption(
-        "Selecciona la semana y la sesión para construir "
-        "el entrenamiento del día."
+        "La programación se obtiene directamente "
+        "de la base de datos."
     )
 
-    # --------------------------------------
+
+    # -----------------------------------------------------
     # SEMANA Y SESIÓN
-    # --------------------------------------
+    # -----------------------------------------------------
 
     col1, col2 = st.columns(2)
 
@@ -505,13 +311,42 @@ elif pagina == "Planear sesión":
         )
 
 
-    # --------------------------------------
-    # BLOQUE
-    # --------------------------------------
-
     bloque, nombre_bloque = obtener_bloque(
         semana
     )
+
+
+    # -----------------------------------------------------
+    # TIPO DE SESIÓN AUTOMÁTICO
+    # -----------------------------------------------------
+
+    fila_semana = df_distribucion[
+        df_distribucion["Semana"] == semana
+    ]
+
+    columna_sesion = (
+        f"Sesión {sesion}"
+    )
+
+
+    if (
+        fila_semana.empty
+        or columna_sesion not in df_distribucion.columns
+    ):
+
+        st.error(
+            "No se encontró la sesión programada."
+        )
+
+        st.stop()
+
+
+    tipo_sesion = limpiar_texto(
+        fila_semana.iloc[0][
+            columna_sesion
+        ]
+    )
+
 
     st.info(
         f"Bloque {bloque} · "
@@ -521,54 +356,154 @@ elif pagina == "Planear sesión":
     )
 
 
-    # --------------------------------------
-    # TIPO DE SESIÓN
-    # --------------------------------------
-
-    tipos_disponibles = list(
-        ejercicios_por_bloque[
-            bloque
-        ].keys()
-    )
-
-    tipo_sesion = st.selectbox(
+    st.metric(
         "Tipo de sesión",
-        tipos_disponibles
+        tipo_sesion
     )
 
 
-    # --------------------------------------
-    # EJERCICIOS
-    # --------------------------------------
+    # =====================================================
+    # LEER LISTA REAL DE EJERCICIOS
+    # =====================================================
 
-    ejercicios_disponibles = (
-        ejercicios_por_bloque[
-            bloque
-        ][tipo_sesion]
+    df_lista = leer_hoja(
+        HOJAS_EJERCICIOS[bloque]
     )
+
+
+    # -----------------------------------------------------
+    # BUSCAR FILA DEL TIPO DE SESIÓN
+    # -----------------------------------------------------
+
+    primera_columna = (
+        df_lista.columns[0]
+    )
+
+    coincidencia = df_lista[
+        df_lista[
+            primera_columna
+        ]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        ==
+        tipo_sesion.lower()
+    ]
+
+
+    ejercicios = []
+
+
+    # -----------------------------------------------------
+    # FORMATO NORMAL
+    # -----------------------------------------------------
+
+    if not coincidencia.empty:
+
+        indice = coincidencia.index[0]
+
+        fila = df_lista.loc[indice]
+
+        for columna in df_lista.columns[1:6]:
+
+            nombre = limpiar_texto(
+                fila[columna]
+            )
+
+            if (
+                nombre
+                and not nombre.lower().startswith(
+                    "opción"
+                )
+            ):
+
+                ejercicios.append(
+                    nombre
+                )
+
+
+    # -----------------------------------------------------
+    # FORMATO CON FILA "OPCIÓN 1..."
+    # -----------------------------------------------------
+
+    if not ejercicios:
+
+        for i in range(
+            len(df_lista)
+        ):
+
+            valor = limpiar_texto(
+                df_lista.iloc[i, 0]
+            )
+
+            if (
+                valor.lower()
+                == tipo_sesion.lower()
+            ):
+
+                if i + 1 < len(
+                    df_lista
+                ):
+
+                    fila_siguiente = (
+                        df_lista.iloc[
+                            i + 1
+                        ]
+                    )
+
+                    for valor_ejercicio in (
+                        fila_siguiente.iloc[
+                            1:6
+                        ]
+                    ):
+
+                        ejercicio = limpiar_texto(
+                            valor_ejercicio
+                        )
+
+                        if ejercicio:
+
+                            ejercicios.append(
+                                ejercicio
+                            )
+
+                break
+
+
+    if not ejercicios:
+
+        st.error(
+            f"No se encontraron ejercicios para "
+            f"{tipo_sesion}."
+        )
+
+        st.stop()
+
+
+    # =====================================================
+    # SELECCIÓN DE EJERCICIOS
+    # =====================================================
 
     st.divider()
 
     st.subheader(
-        "Selección de ejercicios"
+        "Ejercicios"
     )
 
-
-    # --------------------------------------
-    # CANTIDAD
-    # --------------------------------------
 
     cantidad = st.slider(
-        "¿Cuántos ejercicios quieres realizar?",
-        min_value=1,
-        max_value=5,
-        value=3
+        "Cantidad de ejercicios",
+        1,
+        min(
+            5,
+            len(ejercicios)
+        ),
+        min(
+            3,
+            len(ejercicios)
+        )
     )
 
-
-    # --------------------------------------
-    # MODO
-    # --------------------------------------
 
     modo = st.radio(
         "Modo de selección",
@@ -580,54 +515,206 @@ elif pagina == "Planear sesión":
     )
 
 
-    # --------------------------------------
+    # -----------------------------------------------------
     # MANUAL
-    # --------------------------------------
+    # -----------------------------------------------------
 
     if modo == "Manual":
 
         seleccion = st.multiselect(
             "Selecciona los ejercicios",
-            ejercicios_disponibles,
+            ejercicios,
             max_selections=cantidad
         )
 
 
-    # --------------------------------------
+    # -----------------------------------------------------
     # ALEATORIO
-    # --------------------------------------
+    # -----------------------------------------------------
 
     else:
 
+        clave = (
+            f"aleatorio_"
+            f"{bloque}_"
+            f"{semana}_"
+            f"{sesion}_"
+            f"{tipo_sesion}_"
+            f"{cantidad}"
+        )
+
         if st.button(
-            "Generar ejercicios aleatorios",
+            "Generar selección",
             use_container_width=True
         ):
 
             st.session_state[
-                "ejercicios_aleatorios"
+                clave
             ] = random.sample(
-                ejercicios_disponibles,
-                k=cantidad
+                ejercicios,
+                cantidad
             )
 
-        seleccion = st.session_state.get(
-            "ejercicios_aleatorios",
-            []
+        seleccion = (
+            st.session_state.get(
+                clave,
+                []
+            )
         )
 
 
-    # --------------------------------------
-    # MOSTRAR PLAN
-    # --------------------------------------
+    # =====================================================
+    # CARGA REAL DESDE GOOGLE SHEETS
+    # =====================================================
 
     if seleccion:
 
         st.divider()
 
+        df_carga = leer_hoja(
+            HOJAS_CARGA[bloque]
+        )
+
+
+        columnas_numericas = [
+            "Series/Boulders",
+            "Movimientos",
+            "Vueltas",
+            "RPE objetivo",
+            "Descanso min"
+        ]
+
+
+        for columna in columnas_numericas:
+
+            if columna in df_carga.columns:
+
+                df_carga[
+                    columna
+                ] = pd.to_numeric(
+                    df_carga[
+                        columna
+                    ],
+                    errors="coerce"
+                )
+
+
+        if all(
+            columna in df_carga.columns
+            for columna in [
+                "Series/Boulders",
+                "Movimientos",
+                "Vueltas"
+            ]
+        ):
+
+            df_carga[
+                "Volumen"
+            ] = (
+                df_carga[
+                    "Series/Boulders"
+                ]
+                *
+                df_carga[
+                    "Movimientos"
+                ]
+                *
+                df_carga[
+                    "Vueltas"
+                ]
+            )
+
+
+        filas_plan = []
+
+
+        for ejercicio in seleccion:
+
+            coincidencia_carga = (
+                df_carga[
+                    df_carga[
+                        "Ejercicio"
+                    ]
+                    .astype(str)
+                    .str.strip()
+                    .str.lower()
+                    ==
+                    ejercicio.lower()
+                ]
+            )
+
+
+            if coincidencia_carga.empty:
+
+                filas_plan.append({
+                    "Ejercicio": ejercicio,
+                    "Series/Boulders": None,
+                    "Movimientos": None,
+                    "Vueltas": None,
+                    "RPE": None,
+                    "Descanso": None,
+                    "Volumen": None
+                })
+
+                continue
+
+
+            fila = (
+                coincidencia_carga.iloc[
+                    0
+                ]
+            )
+
+
+            filas_plan.append({
+                "Ejercicio":
+                    ejercicio,
+
+                "Series/Boulders":
+                    fila.get(
+                        "Series/Boulders"
+                    ),
+
+                "Movimientos":
+                    fila.get(
+                        "Movimientos"
+                    ),
+
+                "Vueltas":
+                    fila.get(
+                        "Vueltas"
+                    ),
+
+                "RPE":
+                    fila.get(
+                        "RPE objetivo"
+                    ),
+
+                "Descanso":
+                    fila.get(
+                        "Descanso min"
+                    ),
+
+                "Volumen":
+                    fila.get(
+                        "Volumen"
+                    )
+            })
+
+
+        df_plan = pd.DataFrame(
+            filas_plan
+        )
+
+
+        # =================================================
+        # MOSTRAR PLAN
+        # =================================================
+
         st.subheader(
             "Plan de la sesión"
         )
+
 
         col1, col2, col3 = st.columns(3)
 
@@ -646,41 +733,130 @@ elif pagina == "Planear sesión":
             sesion
         )
 
-        st.write(
-            f"**Tipo:** {tipo_sesion}"
-        )
 
         st.write(
-            "**Ejercicios seleccionados:**"
+            f"**Tipo:** "
+            f"{tipo_sesion}"
         )
 
-        for i, ejercicio in enumerate(
-            seleccion,
-            1
+
+        st.dataframe(
+            df_plan,
+            use_container_width=True,
+            hide_index=True
+        )
+
+
+        # =================================================
+        # RESUMEN DE CARGA
+        # =================================================
+
+        volumen_total = pd.to_numeric(
+            df_plan[
+                "Volumen"
+            ],
+            errors="coerce"
+        ).sum()
+
+
+        rpe_medio = pd.to_numeric(
+            df_plan[
+                "RPE"
+            ],
+            errors="coerce"
+        ).mean()
+
+
+        if pd.isna(
+            rpe_medio
         ):
 
+            rpe_medio = 0
+
+
+        carga_planificada = (
+            volumen_total
+            *
+            rpe_medio
+        )
+
+
+        st.divider()
+
+        col1, col2, col3 = (
+            st.columns(3)
+        )
+
+
+        col1.metric(
+            "Volumen planificado",
+            f"{volumen_total:.0f}"
+        )
+
+
+        col2.metric(
+            "RPE objetivo",
+            f"{rpe_medio:.1f}"
+        )
+
+
+        col3.metric(
+            "Carga planificada",
+            f"{carga_planificada:.0f}"
+        )
+
+
+        # -------------------------------------------------
+        # GUARDAR TEMPORALMENTE LA SESIÓN
+        # -------------------------------------------------
+
+        if len(
+            seleccion
+        ) == cantidad:
+
+            st.session_state[
+                "sesion_planificada"
+            ] = {
+                "Semana":
+                    semana,
+
+                "Sesión":
+                    sesion,
+
+                "Bloque":
+                    bloque,
+
+                "Tipo":
+                    tipo_sesion,
+
+                "Ejercicios":
+                    seleccion,
+
+                "Volumen":
+                    float(
+                        volumen_total
+                    ),
+
+                "RPE":
+                    float(
+                        rpe_medio
+                    ),
+
+                "Carga":
+                    float(
+                        carga_planificada
+                    )
+            }
+
+
             st.success(
-                f"{i}. {ejercicio}"
-            )
-
-        if len(seleccion) < cantidad:
-
-            st.warning(
-                f"Seleccionaste "
-                f"{len(seleccion)} "
-                f"de {cantidad} ejercicios."
-            )
-
-        else:
-
-            st.success(
-                "Sesión lista para utilizar."
+                "Sesión lista."
             )
 
 
-# ======================================
+# =========================================================
 # REGISTRAR SESIÓN
-# ======================================
+# =========================================================
 
 elif pagina == "Registrar sesión":
 
@@ -688,32 +864,64 @@ elif pagina == "Registrar sesión":
         "Registrar sesión"
     )
 
-    semana = st.selectbox(
-        "Semana",
-        list(range(1, 53)),
-        index=46,
-        key="registro_semana"
+
+    plan = st.session_state.get(
+        "sesion_planificada"
     )
 
-    sesion = st.selectbox(
-        "Sesión",
-        [1, 2, 3, 4],
-        key="registro_sesion"
+
+    if not plan:
+
+        st.warning(
+            "Primero crea una sesión en "
+            "'Planear sesión'."
+        )
+
+        st.stop()
+
+
+    st.info(
+        f"Semana {plan['Semana']} · "
+        f"Sesión {plan['Sesión']} · "
+        f"{plan['Tipo']}"
     )
 
-    alumnos = datos[
-        "Alumno"
-    ].tolist()
+
+    col1, col2, col3 = (
+        st.columns(3)
+    )
+
+
+    col1.metric(
+        "Volumen planificado",
+        f"{plan['Volumen']:.0f}"
+    )
+
+
+    col2.metric(
+        "RPE objetivo",
+        f"{plan['RPE']:.1f}"
+    )
+
+
+    col3.metric(
+        "Carga planificada",
+        f"{plan['Carga']:.0f}"
+    )
+
 
     presentes = st.multiselect(
         "Alumnos presentes",
         alumnos,
-        default=alumnos
+        default=[]
     )
+
 
     st.divider()
 
+
     resultados = []
+
 
     for alumno in presentes:
 
@@ -721,64 +929,197 @@ elif pagina == "Registrar sesión":
             alumno
         )
 
-        col1, col2 = st.columns(2)
+        col1, col2 = (
+            st.columns(2)
+        )
+
 
         with col1:
 
-            volumen = st.number_input(
-                "Volumen real",
-                min_value=0,
-                max_value=2000,
-                value=80,
-                key=f"vol_{alumno}"
+            volumen_real = (
+                st.number_input(
+                    "Volumen real",
+                    min_value=0,
+                    max_value=2000,
+                    value=int(
+                        plan[
+                            "Volumen"
+                        ]
+                    ),
+                    key=(
+                        f"vol_"
+                        f"{alumno}"
+                    )
+                )
             )
+
 
         with col2:
 
-            rpe = st.slider(
-                "RPE real",
-                1,
-                10,
-                6,
-                key=f"rpe_{alumno}"
+            rpe_real = (
+                st.slider(
+                    "RPE real",
+                    1,
+                    10,
+                    int(
+                        round(
+                            plan[
+                                "RPE"
+                            ]
+                        )
+                    ),
+                    key=(
+                        f"rpe_"
+                        f"{alumno}"
+                    )
+                )
             )
 
+
+        carga_real = (
+            volumen_real
+            *
+            rpe_real
+        )
+
+
         resultados.append({
-            "Semana": semana,
-            "Sesión": sesion,
-            "Alumno": alumno,
-            "Volumen": volumen,
-            "RPE": rpe,
-            "Carga": volumen * rpe
+            "Alumno":
+                alumno,
+
+            "Volumen planificado":
+                plan[
+                    "Volumen"
+                ],
+
+            "Volumen real":
+                volumen_real,
+
+            "RPE planificado":
+                plan[
+                    "RPE"
+                ],
+
+            "RPE real":
+                rpe_real,
+
+            "Carga planificada":
+                plan[
+                    "Carga"
+                ],
+
+            "Carga real":
+                carga_real
         })
 
 
+    # -----------------------------------------------------
+    # POR AHORA NO ESCRIBE AL SHEET
+    # -----------------------------------------------------
+
     if st.button(
-        "Guardar sesión",
+        "Procesar sesión",
         use_container_width=True
     ):
 
-        st.success(
-            "Sesión registrada correctamente."
-        )
+        if not resultados:
 
-        st.dataframe(
-            pd.DataFrame(
-                resultados
-            ),
-            use_container_width=True
-        )
+            st.warning(
+                "Selecciona al menos un alumno."
+            )
+
+        else:
+
+            df_resultados = (
+                pd.DataFrame(
+                    resultados
+                )
+            )
 
 
-# ======================================
+            st.success(
+                "Resultados procesados."
+            )
+
+
+            st.dataframe(
+                df_resultados,
+                use_container_width=True,
+                hide_index=True
+            )
+
+
+            st.warning(
+                "Esta versión está conectada a Google "
+                "Sheets en modo lectura. Todavía no "
+                "escribe resultados en la hoja."
+            )
+
+
+# =========================================================
 # SEGUIMIENTO
-# ======================================
+# =========================================================
 
 elif pagina == "Seguimiento":
 
     st.title(
-        "Seguimiento por bloque"
+        "Seguimiento"
     )
+
+
+    try:
+
+        df_historial = leer_hoja(
+            "Historial semanal"
+        )
+
+    except Exception:
+
+        st.warning(
+            "No se pudo cargar Historial semanal."
+        )
+
+        st.stop()
+
+
+    if df_historial.empty:
+
+        st.info(
+            "Todavía no hay historial."
+        )
+
+        st.stop()
+
+
+    columnas_numericas = [
+        "Semana",
+        "Sesión",
+        "Volumen planificado",
+        "Volumen real",
+        "RPE planificado",
+        "RPE real",
+        "Carga planificada",
+        "Carga real"
+    ]
+
+
+    for columna in columnas_numericas:
+
+        if columna in df_historial.columns:
+
+            df_historial[
+                columna
+            ] = pd.to_numeric(
+                df_historial[
+                    columna
+                ],
+                errors="coerce"
+            )
+
+
+    # -----------------------------------------------------
+    # BLOQUE
+    # -----------------------------------------------------
 
     bloque_analisis = st.selectbox(
         "Bloque",
@@ -786,117 +1127,232 @@ elif pagina == "Seguimiento":
         index=3
     )
 
-    alumno = st.selectbox(
-        "Selecciona alumno",
-        datos["Alumno"]
+
+    rangos = {
+        1: (1, 13),
+        2: (14, 26),
+        3: (27, 39),
+        4: (40, 52)
+    }
+
+
+    inicio, fin = (
+        rangos[
+            bloque_analisis
+        ]
     )
 
-    datos_alumno = datos[
-        datos["Alumno"] == alumno
-    ].iloc[0]
+
+    df_bloque = df_historial[
+        (
+            df_historial[
+                "Semana"
+            ] >= inicio
+        )
+        &
+        (
+            df_historial[
+                "Semana"
+            ] <= fin
+        )
+    ].copy()
 
 
-    # --------------------------------------
-    # MÉTRICAS
-    # --------------------------------------
+    if df_bloque.empty:
 
-    col1, col2, col3 = st.columns(3)
+        st.info(
+            "No hay datos registrados "
+            "para este bloque."
+        )
+
+        st.stop()
+
+
+    alumno = st.selectbox(
+        "Alumno",
+        sorted(
+            df_bloque[
+                "Alumno"
+            ]
+            .dropna()
+            .astype(str)
+            .unique()
+        )
+    )
+
+
+    df_alumno = df_bloque[
+        df_bloque[
+            "Alumno"
+        ].astype(str)
+        ==
+        alumno
+    ]
+
+
+    resumen = (
+        df_alumno
+        .groupby(
+            "Semana",
+            as_index=False
+        )
+        .agg({
+            "Volumen planificado":
+                "sum",
+
+            "Volumen real":
+                "sum",
+
+            "RPE planificado":
+                "mean",
+
+            "RPE real":
+                "mean",
+
+            "Carga planificada":
+                "sum",
+
+            "Carga real":
+                "sum"
+        })
+    )
+
+
+    st.subheader(
+        alumno
+    )
+
+
+    col1, col2, col3 = (
+        st.columns(3)
+    )
+
+
+    volumen_pct = (
+        resumen[
+            "Volumen real"
+        ].sum()
+        /
+        resumen[
+            "Volumen planificado"
+        ].sum()
+        * 100
+    )
+
+
+    carga_pct = (
+        resumen[
+            "Carga real"
+        ].sum()
+        /
+        resumen[
+            "Carga planificada"
+        ].sum()
+        * 100
+    )
+
+
+    rpe_real = (
+        resumen[
+            "RPE real"
+        ].mean()
+    )
+
 
     col1.metric(
         "Volumen",
-        f"{datos_alumno['Volumen %']}%"
+        f"{volumen_pct:.1f}%"
     )
 
+
     col2.metric(
-        "RPE real",
-        datos_alumno["RPE real"]
+        "RPE medio",
+        f"{rpe_real:.1f}"
     )
+
 
     col3.metric(
         "Carga",
-        f"{datos_alumno['Carga %']}%"
+        f"{carga_pct:.1f}%"
     )
 
 
-    # --------------------------------------
-    # TENDENCIA SIMULADA
-    # --------------------------------------
-
-    tendencia = pd.DataFrame({
-        "Semana": [
-            44,
-            45,
-            46,
-            47
-        ],
-
-        "Volumen": [
-            88,
-            91,
-            86,
-            datos_alumno[
-                "Volumen %"
-            ]
-        ],
-
-        "Carga": [
-            95,
-            97,
-            90,
-            datos_alumno[
-                "Carga %"
-            ]
-        ],
-
-        "RPE": [
-            6.0,
-            6.5,
-            6.4,
-            datos_alumno[
-                "RPE real"
-            ]
-        ]
-    })
-
+    # =====================================================
+    # GRÁFICAS
+    # =====================================================
 
     st.divider()
 
+
     st.subheader(
-        "Volumen semanal"
+        "Volumen"
+    )
+
+    grafica_volumen = (
+        resumen[
+            [
+                "Semana",
+                "Volumen planificado",
+                "Volumen real"
+            ]
+        ]
+        .set_index(
+            "Semana"
+        )
     )
 
     st.line_chart(
-        tendencia.set_index(
-            "Semana"
-        )["Volumen"]
+        grafica_volumen
     )
 
 
     st.subheader(
-        "Carga semanal"
+        "RPE"
+    )
+
+    grafica_rpe = (
+        resumen[
+            [
+                "Semana",
+                "RPE planificado",
+                "RPE real"
+            ]
+        ]
+        .set_index(
+            "Semana"
+        )
     )
 
     st.line_chart(
-        tendencia.set_index(
-            "Semana"
-        )["Carga"]
+        grafica_rpe
     )
 
 
     st.subheader(
-        "RPE semanal"
+        "Carga"
+    )
+
+    grafica_carga = (
+        resumen[
+            [
+                "Semana",
+                "Carga planificada",
+                "Carga real"
+            ]
+        ]
+        .set_index(
+            "Semana"
+        )
     )
 
     st.line_chart(
-        tendencia.set_index(
-            "Semana"
-        )["RPE"]
+        grafica_carga
     )
 
 
-# ======================================
+# =========================================================
 # ALERTAS
-# ======================================
+# =========================================================
 
 elif pagina == "Alertas":
 
@@ -904,50 +1360,144 @@ elif pagina == "Alertas":
         "Alertas y recomendaciones"
     )
 
-    st.caption(
-        "Seguimiento automático del volumen, "
-        "RPE y carga por alumno."
+
+    try:
+
+        df_seguimiento = leer_hoja(
+            "Seguimiento por bloque"
+        )
+
+    except Exception:
+
+        st.warning(
+            "No se pudo cargar "
+            "'Seguimiento por bloque'."
+        )
+
+        st.stop()
+
+
+    if df_seguimiento.empty:
+
+        st.info(
+            "Todavía no hay seguimiento registrado."
+        )
+
+        st.stop()
+
+
+    bloque_alertas = st.selectbox(
+        "Bloque",
+        [1, 2, 3, 4],
+        index=3,
+        key="bloque_alertas"
     )
 
-    st.divider()
 
-    for _, fila in datos.iterrows():
+    df_alertas = (
+        df_seguimiento[
+            pd.to_numeric(
+                df_seguimiento[
+                    "Bloque"
+                ],
+                errors="coerce"
+            )
+            ==
+            bloque_alertas
+        ]
+        .copy()
+    )
+
+
+    if df_alertas.empty:
+
+        st.info(
+            "No hay alertas registradas "
+            "para este bloque."
+        )
+
+        st.stop()
+
+
+    # -----------------------------------------------------
+    # ÚLTIMO REGISTRO POR ALUMNO
+    # -----------------------------------------------------
+
+    df_alertas[
+        "Semana"
+    ] = pd.to_numeric(
+        df_alertas[
+            "Semana"
+        ],
+        errors="coerce"
+    )
+
+
+    df_alertas = (
+        df_alertas
+        .sort_values(
+            "Semana"
+        )
+        .groupby(
+            "Alumno",
+            as_index=False
+        )
+        .tail(1)
+    )
+
+
+    for _, fila in df_alertas.iterrows():
+
+        alumno = limpiar_texto(
+            fila.get(
+                "Alumno"
+            )
+        )
+
+        nivel = limpiar_texto(
+            fila.get(
+                "Nivel"
+            )
+        )
+
 
         with st.expander(
-            f"{fila['Alumno']} · "
-            f"{fila['Nivel']}"
+            f"{alumno} · {nivel}"
         ):
 
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3 = (
+                st.columns(3)
+            )
+
 
             col1.metric(
                 "Volumen",
-                f"{fila['Volumen %']}%"
+                f"{fila.get('Volumen %', 0)}%"
             )
 
+
             col2.metric(
-                "RPE",
-                fila["RPE real"],
-                delta=round(
-                    fila["RPE real"]
-                    - fila[
-                        "RPE planificado"
-                    ],
-                    1
+                "RPE real",
+                fila.get(
+                    "RPE real",
+                    "-"
                 )
             )
 
+
             col3.metric(
                 "Carga",
-                f"{fila['Carga %']}%"
+                f"{fila.get('Carga %', 0)}%"
             )
+
 
             st.write(
                 f"**Estado:** "
-                f"{fila['Estado']}"
+                f"{fila.get('Estado', '')}"
             )
+
 
             st.info(
                 f"Recomendación: "
-                f"{fila['Recomendación']}"
+                f"{fila.get('Recomendación', '')}"
             )
