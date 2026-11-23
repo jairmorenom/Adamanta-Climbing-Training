@@ -647,6 +647,8 @@ def generar_recomendacion(
         )
 
     return "Mantener planificación actual"
+
+
 # =========================================================
 # COACH INSIGHTS
 # =========================================================
@@ -668,7 +670,7 @@ def generar_coach_insights(resumen):
     ultima = resumen.iloc[-1]
 
     # =====================================================
-    # 1. CUMPLIMIENTO GENERAL DEL BLOQUE
+    # CUMPLIMIENTO GENERAL
     # =====================================================
 
     volumen_plan_total = (
@@ -717,17 +719,14 @@ def generar_coach_insights(resumen):
         rpe_plan_total
     )
 
-
     # =====================================================
-    # 2. CUMPLIMIENTO DEL BLOQUE
+    # BUENA ADHERENCIA
     # =====================================================
 
     if (
         90 <= volumen_pct_total <= 110
-        and
-        90 <= carga_pct_total <= 110
-        and
-        abs(dif_rpe_total) < 1
+        and 90 <= carga_pct_total <= 110
+        and abs(dif_rpe_total) < 1
     ):
 
         insights.append({
@@ -744,9 +743,8 @@ def generar_coach_insights(resumen):
             )
         })
 
-
     # =====================================================
-    # 3. RPE RECIENTE
+    # RPE RECIENTE
     # =====================================================
 
     if len(ultimas) >= 2:
@@ -771,7 +769,6 @@ def generar_coach_insights(resumen):
                 )
             })
 
-
     if len(ultimas) >= 3:
 
         if (
@@ -792,9 +789,8 @@ def generar_coach_insights(resumen):
                 )
             })
 
-
     # =====================================================
-    # 4. ADAPTACIÓN POSITIVA
+    # ADAPTACIÓN POSITIVA
     # =====================================================
 
     if len(ultimas) >= 3:
@@ -830,9 +826,8 @@ def generar_coach_insights(resumen):
                 )
             })
 
-
     # =====================================================
-    # 5. MENOS TRABAJO + MÁS ESFUERZO
+    # MENOS VOLUMEN + MAYOR RPE
     # =====================================================
 
     if len(ultimas) >= 2:
@@ -867,9 +862,8 @@ def generar_coach_insights(resumen):
                 )
             })
 
-
     # =====================================================
-    # 6. CARGA RECIENTE
+    # CAMBIO DE CARGA
     # =====================================================
 
     if len(ultimas) >= 3:
@@ -912,7 +906,6 @@ def generar_coach_insights(resumen):
                     )
                 })
 
-
             elif cambio_carga < -20:
 
                 insights.append({
@@ -929,9 +922,8 @@ def generar_coach_insights(resumen):
                     )
                 })
 
-
     # =====================================================
-    # 7. ÚLTIMA SEMANA
+    # ÚLTIMA SEMANA
     # =====================================================
 
     volumen_ultima = (
@@ -946,11 +938,9 @@ def generar_coach_insights(resumen):
         ultima["Dif. RPE"]
     )
 
-
     if (
         volumen_ultima < 80
-        and
-        dif_rpe_ultima < 1
+        and dif_rpe_ultima < 1
     ):
 
         insights.append({
@@ -967,11 +957,9 @@ def generar_coach_insights(resumen):
             )
         })
 
-
     if (
         carga_ultima > 120
-        or
-        volumen_ultima > 120
+        or volumen_ultima > 120
     ):
 
         insights.append({
@@ -987,9 +975,8 @@ def generar_coach_insights(resumen):
             )
         })
 
-
     # =====================================================
-    # 8. SIN SEÑALES RELEVANTES
+    # SIN SEÑALES RELEVANTES
     # =====================================================
 
     if not insights:
@@ -1007,9 +994,8 @@ def generar_coach_insights(resumen):
             )
         })
 
-
-    # Máximo de insights mostrados
     return insights[:5]
+
 
 # =========================================================
 # ACTUALIZAR SEGUIMIENTO POR BLOQUE
@@ -2255,7 +2241,9 @@ elif pagina == "Registrar sesión":
 
 elif pagina == "Seguimiento":
 
-    st.title("Seguimiento")
+    st.title(
+        "Seguimiento"
+    )
 
     st.caption(
         "Compara la planificación con la ejecución real "
@@ -2290,7 +2278,6 @@ elif pagina == "Seguimiento":
                 errors="coerce"
             )
 
-
     # =====================================================
     # SELECCIÓN DE BLOQUE
     # =====================================================
@@ -2310,7 +2297,6 @@ elif pagina == "Seguimiento":
 
         st.stop()
 
-
     rangos = {
         1: (1, 13),
         2: (14, 26),
@@ -2321,7 +2307,6 @@ elif pagina == "Seguimiento":
     inicio, fin = rangos[
         bloque_analisis
     ]
-
 
     df_bloque = (
         df_historial[
@@ -2338,7 +2323,6 @@ elif pagina == "Seguimiento":
         .copy()
     )
 
-
     if df_bloque.empty:
 
         st.info(
@@ -2346,7 +2330,6 @@ elif pagina == "Seguimiento":
         )
 
         st.stop()
-
 
     # =====================================================
     # SELECCIÓN DE ALUMNO
@@ -2366,7 +2349,6 @@ elif pagina == "Seguimiento":
         placeholder="Selecciona un alumno..."
     )
 
-
     if alumno is None:
 
         st.info(
@@ -2374,7 +2356,6 @@ elif pagina == "Seguimiento":
         )
 
         st.stop()
-
 
     # =====================================================
     # FILTRAR ALUMNO
@@ -2392,7 +2373,6 @@ elif pagina == "Seguimiento":
         .copy()
     )
 
-
     # =====================================================
     # RESUMEN SEMANAL
     # =====================================================
@@ -2404,89 +2384,43 @@ elif pagina == "Seguimiento":
             as_index=False
         )
         .agg({
-
-            "Volumen planificado":
-                "sum",
-
-            "Volumen real":
-                "sum",
-
-            "RPE planificado":
-                "mean",
-
-            "RPE real":
-                "mean",
-
-            "Carga planificada":
-                "sum",
-
-            "Carga real":
-                "sum"
+            "Volumen planificado": "sum",
+            "Volumen real": "sum",
+            "RPE planificado": "mean",
+            "RPE real": "mean",
+            "Carga planificada": "sum",
+            "Carga real": "sum"
         })
         .sort_values(
             "Semana"
         )
     )
 
-
     # =====================================================
     # MÉTRICAS DERIVADAS
     # =====================================================
 
-    resumen[
-        "Volumen %"
-    ] = (
-
-        resumen[
-            "Volumen real"
-        ]
-
+    resumen["Volumen %"] = (
+        resumen["Volumen real"]
         /
-
-        resumen[
-            "Volumen planificado"
-        ]
-
-        * 100
-
+        resumen["Volumen planificado"]
+        *
+        100
     )
 
-
-    resumen[
-        "Carga %"
-    ] = (
-
-        resumen[
-            "Carga real"
-        ]
-
+    resumen["Carga %"] = (
+        resumen["Carga real"]
         /
-
-        resumen[
-            "Carga planificada"
-        ]
-
-        * 100
-
+        resumen["Carga planificada"]
+        *
+        100
     )
 
-
-    resumen[
-        "Dif. RPE"
-    ] = (
-
-        resumen[
-            "RPE real"
-        ]
-
+    resumen["Dif. RPE"] = (
+        resumen["RPE real"]
         -
-
-        resumen[
-            "RPE planificado"
-        ]
-
+        resumen["RPE planificado"]
     )
-
 
     # =====================================================
     # MÉTRICAS DEL BLOQUE
@@ -2499,14 +2433,12 @@ elif pagina == "Seguimiento":
         .sum()
     )
 
-
     volumen_real_total = (
         resumen[
             "Volumen real"
         ]
         .sum()
     )
-
 
     carga_plan_total = (
         resumen[
@@ -2515,14 +2447,12 @@ elif pagina == "Seguimiento":
         .sum()
     )
 
-
     carga_real_total = (
         resumen[
             "Carga real"
         ]
         .sum()
     )
-
 
     if volumen_plan_total > 0:
 
@@ -2538,7 +2468,6 @@ elif pagina == "Seguimiento":
 
         volumen_pct_total = 0
 
-
     if carga_plan_total > 0:
 
         carga_pct_total = (
@@ -2553,14 +2482,12 @@ elif pagina == "Seguimiento":
 
         carga_pct_total = 0
 
-
     rpe_plan_total = (
         resumen[
             "RPE planificado"
         ]
         .mean()
     )
-
 
     rpe_real_total = (
         resumen[
@@ -2569,13 +2496,11 @@ elif pagina == "Seguimiento":
         .mean()
     )
 
-
     dif_rpe_total = (
         rpe_real_total
         -
         rpe_plan_total
     )
-
 
     sesiones_realizadas = (
         len(
@@ -2583,16 +2508,10 @@ elif pagina == "Seguimiento":
         )
     )
 
-
-    # =====================================================
-    # ÚLTIMA SEMANA
-    # =====================================================
-
     ultima_semana = (
         resumen
         .iloc[-1]
     )
-
 
     # =====================================================
     # ENCABEZADO
@@ -2610,7 +2529,6 @@ elif pagina == "Seguimiento":
         f"{sesiones_realizadas} sesiones registradas"
     )
 
-
     # =====================================================
     # KPIs PRINCIPALES
     # =====================================================
@@ -2618,7 +2536,6 @@ elif pagina == "Seguimiento":
     col1, col2, col3, col4 = (
         st.columns(4)
     )
-
 
     with col1:
 
@@ -2631,7 +2548,6 @@ elif pagina == "Seguimiento":
             )
         )
 
-
     with col2:
 
         st.metric(
@@ -2642,7 +2558,6 @@ elif pagina == "Seguimiento":
                 "vs plan"
             )
         )
-
 
     with col3:
 
@@ -2655,7 +2570,6 @@ elif pagina == "Seguimiento":
             ),
             delta_color="inverse"
         )
-
 
     with col4:
 
@@ -2671,128 +2585,104 @@ elif pagina == "Seguimiento":
                 "carga"
             )
         )
-# =========================================================
-# COACH INSIGHTS
-# =========================================================
 
-st.divider()
+    # =====================================================
+    # COACH INSIGHTS
+    # =====================================================
 
-st.subheader(
-    "Coach Insights"
-)
+    st.divider()
 
-st.caption(
-    "Interpretación automática de la respuesta del atleta "
-    "respecto a la planificación."
-)
+    st.subheader(
+        "Coach Insights"
+    )
 
+    st.caption(
+        "Interpretación automática de la respuesta del atleta "
+        "respecto a la planificación."
+    )
 
-insights = generar_coach_insights(
-    resumen
-)
+    insights = generar_coach_insights(
+        resumen
+    )
 
+    for insight in insights:
 
-for insight in insights:
+        nivel = insight["nivel"]
+        titulo = insight["titulo"]
+        mensaje = insight["mensaje"]
+        accion = insight["accion"]
 
-    nivel = insight[
-        "nivel"
-    ]
+        if nivel == "POSITIVO":
 
-    titulo = insight[
-        "titulo"
-    ]
+            with st.container(
+                border=True
+            ):
 
-    mensaje = insight[
-        "mensaje"
-    ]
+                st.markdown(
+                    f"### ✅ {titulo}"
+                )
 
-    accion = insight[
-        "accion"
-    ]
+                st.write(
+                    mensaje
+                )
 
+                st.success(
+                    f"**Acción sugerida:** {accion}"
+                )
 
-    if nivel == "POSITIVO":
+        elif nivel == "ALERTA":
 
-        icono = "✅"
+            with st.container(
+                border=True
+            ):
 
-        with st.container(
-            border=True
-        ):
+                st.markdown(
+                    f"### 🔴 {titulo}"
+                )
 
-            st.markdown(
-                f"### {icono} {titulo}"
-            )
+                st.write(
+                    mensaje
+                )
 
-            st.write(
-                mensaje
-            )
+                st.error(
+                    f"**Acción sugerida:** {accion}"
+                )
 
-            st.success(
-                f"**Acción sugerida:** {accion}"
-            )
+        elif nivel == "ATENCION":
 
+            with st.container(
+                border=True
+            ):
 
-    elif nivel == "ALERTA":
+                st.markdown(
+                    f"### 🟠 {titulo}"
+                )
 
-        icono = "🔴"
+                st.write(
+                    mensaje
+                )
 
-        with st.container(
-            border=True
-        ):
+                st.warning(
+                    f"**Acción sugerida:** {accion}"
+                )
 
-            st.markdown(
-                f"### {icono} {titulo}"
-            )
+        else:
 
-            st.write(
-                mensaje
-            )
+            with st.container(
+                border=True
+            ):
 
-            st.error(
-                f"**Acción sugerida:** {accion}"
-            )
+                st.markdown(
+                    f"### 🔵 {titulo}"
+                )
 
+                st.write(
+                    mensaje
+                )
 
-    elif nivel == "ATENCION":
-
-        icono = "🟠"
-
-        with st.container(
-            border=True
-        ):
-
-            st.markdown(
-                f"### {icono} {titulo}"
-            )
-
-            st.write(
-                mensaje
-            )
-
-            st.warning(
-                f"**Acción sugerida:** {accion}"
-            )
-
-
-    else:
-
-        icono = "🔵"
-
-        with st.container(
-            border=True
-        ):
-
-            st.markdown(
-                f"### {icono} {titulo}"
-            )
-
-            st.write(
-                mensaje
-            )
-
-            st.info(
-                f"**Acción sugerida:** {accion}"
-            )
+                st.info(
+                    f"**Acción sugerida:** {accion}"
+                )
 
     # =====================================================
     # ÚLTIMA SEMANA
@@ -2804,29 +2694,24 @@ for insight in insights:
         "Última semana registrada"
     )
 
-
     col1, col2, col3 = (
         st.columns(3)
     )
-
 
     col1.metric(
         "Volumen",
         f"{ultima_semana['Volumen %']:.1f}%"
     )
 
-
     col2.metric(
         "Carga",
         f"{ultima_semana['Carga %']:.1f}%"
     )
 
-
     col3.metric(
         "Δ RPE",
         f"{ultima_semana['Dif. RPE']:+.1f}"
     )
-
 
     # =====================================================
     # TABS
@@ -2845,7 +2730,6 @@ for insight in insights:
         )
     )
 
-
     # =====================================================
     # GRÁFICA VOLUMEN
     # =====================================================
@@ -2855,7 +2739,6 @@ for insight in insights:
         st.subheader(
             "Volumen planificado vs real"
         )
-
 
         volumen_long = (
             resumen[
@@ -2872,19 +2755,14 @@ for insight in insights:
             )
         )
 
-
         grafica_volumen = (
-
             alt.Chart(
                 volumen_long
             )
-
             .mark_line(
                 point=True
             )
-
             .encode(
-
                 x=alt.X(
                     "Semana:Q",
                     title="Semana"
@@ -2916,28 +2794,22 @@ for insight in insights:
                     )
                 ]
             )
-
             .properties(
                 height=400
             )
-
             .interactive()
-
         )
-
 
         st.altair_chart(
             grafica_volumen,
             use_container_width=True
         )
 
-
         st.caption(
             "El objetivo es observar si el volumen real "
             "se mantiene cerca de la planificación a lo largo "
             "del bloque."
         )
-
 
     # =====================================================
     # GRÁFICA CARGA
@@ -2948,7 +2820,6 @@ for insight in insights:
         st.subheader(
             "Carga planificada vs real"
         )
-
 
         carga_long = (
             resumen[
@@ -2965,19 +2836,14 @@ for insight in insights:
             )
         )
 
-
         grafica_carga = (
-
             alt.Chart(
                 carga_long
             )
-
             .mark_line(
                 point=True
             )
-
             .encode(
-
                 x=alt.X(
                     "Semana:Q",
                     title="Semana"
@@ -3009,27 +2875,21 @@ for insight in insights:
                     )
                 ]
             )
-
             .properties(
                 height=400
             )
-
             .interactive()
-
         )
-
 
         st.altair_chart(
             grafica_carga,
             use_container_width=True
         )
 
-
         st.caption(
             "La carga combina el volumen realizado "
             "con el RPE reportado."
         )
-
 
     # =====================================================
     # GRÁFICA RPE
@@ -3040,7 +2900,6 @@ for insight in insights:
         st.subheader(
             "RPE planificado vs real"
         )
-
 
         rpe_long = (
             resumen[
@@ -3057,19 +2916,14 @@ for insight in insights:
             )
         )
 
-
         grafica_rpe = (
-
             alt.Chart(
                 rpe_long
             )
-
             .mark_line(
                 point=True
             )
-
             .encode(
-
                 x=alt.X(
                     "Semana:Q",
                     title="Semana"
@@ -3107,28 +2961,22 @@ for insight in insights:
                     )
                 ]
             )
-
             .properties(
                 height=400
             )
-
             .interactive()
-
         )
-
 
         st.altair_chart(
             grafica_rpe,
             use_container_width=True
         )
 
-
         st.caption(
             "Una separación creciente entre RPE planificado "
             "y RPE real indica que la respuesta del atleta "
             "está cambiando respecto al plan."
         )
-
 
     # =====================================================
     # TABLA SEMANAL
@@ -3181,14 +3029,12 @@ for insight in insights:
             hide_index=True
         )
 
-# =========================================================
-# ALERTAS
-# =========================================================
+
 # =========================================================
 # ALERTAS
 # =========================================================
 
-if pagina == "Alertas":
+elif pagina == "Alertas":
 
     st.title(
         "Alertas y recomendaciones"
@@ -3259,7 +3105,7 @@ if pagina == "Alertas":
 
     for _, fila in df_alertas.iterrows():
 
-        alumno = limpiar_texto(
+        alumno_alerta = limpiar_texto(
             fila.get(
                 "Alumno"
             )
@@ -3272,10 +3118,12 @@ if pagina == "Alertas":
         )
 
         with st.expander(
-            f"{alumno} · {nivel}"
+            f"{alumno_alerta} · {nivel}"
         ):
 
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3 = (
+                st.columns(3)
+            )
 
             col1.metric(
                 "Volumen",
