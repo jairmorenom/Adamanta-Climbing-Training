@@ -14,7 +14,39 @@ st.set_page_config(
     page_icon="🧗",
     layout="wide"
 )
+# =========================================================
+# LOGIN CON GOOGLE
+# =========================================================
 
+if not st.user.is_logged_in:
+
+    st.title("ADAMANTA")
+    st.subheader(
+        "Sistema de planificación y seguimiento"
+    )
+
+    st.write(
+        "Inicia sesión con Google para continuar."
+    )
+
+    st.button(
+        "Iniciar sesión con Google",
+        on_click=st.login,
+        use_container_width=True
+    )
+
+    st.stop()
+
+
+# Usuario autenticado
+st.sidebar.write(
+    f"👤 {st.user.name}"
+)
+
+if st.sidebar.button(
+    "Cerrar sesión"
+):
+    st.logout()
 
 # =========================================================
 # GOOGLE SHEET
