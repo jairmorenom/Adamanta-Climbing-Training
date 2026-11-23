@@ -3650,12 +3650,55 @@ resumen_grupo["Dif. RPE"] = pd.to_numeric(
     # =====================================================
     # HEATMAP — DIFERENCIA RPE
     # =====================================================
-
     else:
 
-        grafica_final = (
+        df_rpe_heatmap = (
+            resumen_grupo[
+                [
+                    "Alumno",
+                    "Semana",
+                    "RPE planificado",
+                    "RPE real",
+                    "Dif. RPE",
+                    "Carga %",
+                    "Volumen %",
+                    "Nivel"
+                ]
+            ]
+            .copy()
+        )
+
+        # Asegurar valores numéricos
+        df_rpe_heatmap["Dif. RPE"] = pd.to_numeric(
+            df_rpe_heatmap["Dif. RPE"],
+            errors="coerce"
+        )
+
+        # Quitar solamente registros sin información RPE
+        df_rpe_heatmap = df_rpe_heatmap.dropna(
+            subset=[
+                "Dif. RPE"
+            ]
+        )
+
+
+        if df_rpe_heatmap.empty:
+
+            st.warning(
+                "No hay datos de RPE suficientes para "
+                "generar este heatmap."
+            )
+
+            st.stop()
+
+
+        # ---------------------------------------------
+        # HEATMAP
+        # ---------------------------------------------
+
+        heatmap_rpe = (
             alt.Chart(
-                resumen_grupo
+                df_rpe_heatmap
             )
             .mark_rect(
                 cornerRadius=4
@@ -3675,34 +3718,64 @@ resumen_grupo["Dif. RPE"] = pd.to_numeric(
 
                 color=alt.Color(
                     "Dif. RPE:Q",
-                    title="Δ RPE"
+                    title="Δ RPE",
+                    scale=alt.Scale(
+                        domain=[
+                            -3,
+                            0,
+                            3
+                        ],
+                        scheme="redyellowgreen",
+                        reverse=True
+                    )
                 ),
 
                 tooltip=[
-                    "Alumno:N",
-                    "Semana:O",
+
+                    alt.Tooltip(
+                        "Alumno:N",
+                        title="Atleta"
+                    ),
+
+                    alt.Tooltip(
+                        "Semana:O",
+                        title="Semana"
+                    ),
 
                     alt.Tooltip(
                         "RPE planificado:Q",
+                        title="RPE planificado",
                         format=".1f"
                     ),
 
                     alt.Tooltip(
                         "RPE real:Q",
+                        title="RPE real",
                         format=".1f"
                     ),
 
                     alt.Tooltip(
                         "Dif. RPE:Q",
+                        title="Δ RPE",
                         format="+.1f"
                     ),
 
                     alt.Tooltip(
                         "Carga %:Q",
+                        title="Carga",
                         format=".1f"
                     ),
 
-                    "Nivel:N"
+                    alt.Tooltip(
+                        "Volumen %:Q",
+                        title="Volumen",
+                        format=".1f"
+                    ),
+
+                    alt.Tooltip(
+                        "Nivel:N",
+                        title="Nivel"
+                    )
                 ]
             )
             .properties(
@@ -3713,10 +3786,41 @@ resumen_grupo["Dif. RPE"] = pd.to_numeric(
             )
         )
 
-    st.altair_chart(
-        grafica_final,
-        use_container_width=True
-    )
+
+        # ---------------------------------------------
+        # TEXTO SOBRE CADA CELDA
+        # ---------------------------------------------
+
+        texto_rpe = (
+            alt.Chart(
+                df_rpe_heatmap
+            )
+            .mark_text(
+                fontSize=12,
+                fontWeight="bold"
+            )
+            .encode(
+
+                x="Semana:O",
+
+                y=alt.Y(
+                    "Alumno:N",
+                    sort="ascending"
+                ),
+
+                text=alt.Text(
+                    "Dif. RPE:Q",
+                    format="+.1f"
+                )
+            )
+        )
+
+
+        grafica_final = (
+            heatmap_rpe
+            +
+            texto_rpe
+        )
 
     # =====================================================
     # PRIORIDADES DEL COACH
