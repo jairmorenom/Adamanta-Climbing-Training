@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import random
 import urllib.parse
-import matplotlib.pyplot as plt
+import requests
 
 
 # =========================================================
@@ -19,12 +19,6 @@ st.set_page_config(
 # =========================================================
 # GOOGLE SHEET
 # =========================================================
-# Pega aquí el ID de tu Google Sheet.
-#
-# Ejemplo:
-# https://docs.google.com/spreadsheets/d/ABC123XYZ/edit
-#
-# SPREADSHEET_ID = "ABC123XYZ"
 
 SPREADSHEET_ID = "1liLy4wqzh5-dx6TCAN7XF62Jx7TYfusbPwftT0B9kjA"
 
@@ -49,7 +43,7 @@ HOJAS_CARGA = {
 
 
 # =========================================================
-# FUNCIONES GOOGLE SHEETS
+# FUNCIONES
 # =========================================================
 
 @st.cache_data(ttl=60)
@@ -127,8 +121,7 @@ except Exception as error:
 
     st.info(
         "Revisa que el Google Sheet esté compartido como "
-        "'Cualquier persona con el enlace → Lector' y que "
-        "SPREADSHEET_ID sea correcto."
+        "'Cualquier persona con el enlace → Lector'."
     )
 
 
@@ -173,7 +166,7 @@ if not conexion_ok:
 
 
 # =========================================================
-# LIMPIAR DISTRIBUCIÓN SEMANAL
+# LIMPIAR DISTRIBUCIÓN
 # =========================================================
 
 df_distribucion["Semana"] = pd.to_numeric(
@@ -226,10 +219,6 @@ if pagina == "Inicio":
     st.divider()
 
 
-    # -----------------------------------------------------
-    # DATOS GENERALES
-    # -----------------------------------------------------
-
     col1, col2, col3 = st.columns(3)
 
     col1.metric(
@@ -256,12 +245,10 @@ if pagina == "Inicio":
 
     if alumnos:
 
-        df_lista_alumnos = pd.DataFrame({
-            "Alumno": alumnos
-        })
-
         st.dataframe(
-            df_lista_alumnos,
+            pd.DataFrame({
+                "Alumno": alumnos
+            }),
             use_container_width=True,
             hide_index=True
         )
@@ -324,9 +311,7 @@ elif pagina == "Planear sesión":
         df_distribucion["Semana"] == semana
     ]
 
-    columna_sesion = (
-        f"Sesión {sesion}"
-    )
+    columna_sesion = f"Sesión {sesion}"
 
 
     if (
@@ -363,7 +348,7 @@ elif pagina == "Planear sesión":
 
 
     # =====================================================
-    # LEER LISTA REAL DE EJERCICIOS
+    # LEER EJERCICIOS
     # =====================================================
 
     df_lista = leer_hoja(
@@ -371,13 +356,10 @@ elif pagina == "Planear sesión":
     )
 
 
-    # -----------------------------------------------------
-    # BUSCAR FILA DEL TIPO DE SESIÓN
-    # -----------------------------------------------------
-
     primera_columna = (
         df_lista.columns[0]
     )
+
 
     coincidencia = df_lista[
         df_lista[
@@ -423,7 +405,7 @@ elif pagina == "Planear sesión":
 
 
     # -----------------------------------------------------
-    # FORMATO CON FILA "OPCIÓN 1..."
+    # FORMATO CON FILA "OPCIÓN"
     # -----------------------------------------------------
 
     if not ejercicios:
@@ -481,7 +463,7 @@ elif pagina == "Planear sesión":
 
 
     # =====================================================
-    # SELECCIÓN DE EJERCICIOS
+    # SELECCIÓN
     # =====================================================
 
     st.divider()
@@ -564,7 +546,7 @@ elif pagina == "Planear sesión":
 
 
     # =====================================================
-    # CARGA REAL DESDE GOOGLE SHEETS
+    # CARGA PLANIFICADA
     # =====================================================
 
     if seleccion:
@@ -806,9 +788,9 @@ elif pagina == "Planear sesión":
         )
 
 
-        # -------------------------------------------------
-        # GUARDAR TEMPORALMENTE LA SESIÓN
-        # -------------------------------------------------
+        # =================================================
+        # GUARDAR EN SESSION STATE
+        # =================================================
 
         if len(
             seleccion
@@ -850,7 +832,7 @@ elif pagina == "Planear sesión":
 
 
             st.success(
-                "Sesión lista."
+                "Sesión lista para registrar."
             )
 
 
@@ -961,11 +943,17 @@ elif pagina == "Registrar sesión":
                     "RPE real",
                     1,
                     10,
-                    int(
-                        round(
-                            plan[
-                                "RPE"
-                            ]
+                    max(
+                        1,
+                        min(
+                            10,
+                            int(
+                                round(
+                                    plan[
+                                        "RPE"
+                                    ]
+                                )
+                            )
                         )
                     ),
                     key=(
@@ -1013,12 +1001,12 @@ elif pagina == "Registrar sesión":
         })
 
 
-    # -----------------------------------------------------
-    # POR AHORA NO ESCRIBE AL SHEET
-    # -----------------------------------------------------
+    # =====================================================
+    # GUARDAR EN GOOGLE SHEETS
+    # =====================================================
 
     if st.button(
-        "Procesar sesión",
+        "Guardar sesión",
         use_container_width=True
     ):
 
@@ -1030,30 +1018,177 @@ elif pagina == "Registrar sesión":
 
         else:
 
-            df_resultados = (
-                pd.DataFrame(
-                    resultados
+            try:
+
+                url_api = st.secrets[
+                    "APPS_SCRIPT_URL"
+                ]
+
+                token_api = st.secrets[
+                    "APPS_SCRIPT_TOKEN"
+                ]
+
+            except Exception:
+
+                st.error(
+                    "No se encontraron los Secrets "
+                    "de Apps Script."
                 )
-            )
+
+                st.stop()
 
 
-            st.success(
-                "Resultados procesados."
-            )
+            guardados = 0
+            errores = []
 
 
-            st.dataframe(
-                df_resultados,
-                use_container_width=True,
-                hide_index=True
-            )
+            with st.spinner(
+                "Guardando resultados..."
+            ):
+
+                for resultado in resultados:
+
+                    payload = {
+
+                        "token":
+                            token_api,
+
+                        "semana":
+                            int(
+                                plan["Semana"]
+                            ),
+
+                        "sesion":
+                            int(
+                                plan["Sesión"]
+                            ),
+
+                        "alumno":
+                            str(
+                                resultado["Alumno"]
+                            ),
+
+                        "tipo_sesion":
+                            str(
+                                plan["Tipo"]
+                            ),
+
+                        "volumen_planificado":
+                            float(
+                                resultado[
+                                    "Volumen planificado"
+                                ]
+                            ),
+
+                        "volumen_real":
+                            int(
+                                resultado[
+                                    "Volumen real"
+                                ]
+                            ),
+
+                        "rpe_planificado":
+                            float(
+                                resultado[
+                                    "RPE planificado"
+                                ]
+                            ),
+
+                        "rpe_real":
+                            int(
+                                resultado[
+                                    "RPE real"
+                                ]
+                            ),
+
+                        "carga_planificada":
+                            float(
+                                resultado[
+                                    "Carga planificada"
+                                ]
+                            ),
+
+                        "carga_real":
+                            float(
+                                resultado[
+                                    "Carga real"
+                                ]
+                            )
+                    }
 
 
-            st.warning(
-                "Esta versión está conectada a Google "
-                "Sheets en modo lectura. Todavía no "
-                "escribe resultados en la hoja."
-            )
+                    try:
+
+                        respuesta = requests.post(
+                            url_api,
+                            json=payload,
+                            timeout=20
+                        )
+
+                        respuesta.raise_for_status()
+
+                        datos_respuesta = (
+                            respuesta.json()
+                        )
+
+
+                        if datos_respuesta.get(
+                            "ok"
+                        ):
+
+                            guardados += 1
+
+                        else:
+
+                            errores.append(
+                                f"{resultado['Alumno']}: "
+                                f"{datos_respuesta.get('error')}"
+                            )
+
+
+                    except Exception as error:
+
+                        errores.append(
+                            f"{resultado['Alumno']}: "
+                            f"{error}"
+                        )
+
+
+            # ------------------------------------------------
+            # RESULTADO
+            # ------------------------------------------------
+
+            if guardados > 0:
+
+                st.success(
+                    f"✅ {guardados} alumno(s) "
+                    f"guardados correctamente."
+                )
+
+
+            if errores:
+
+                st.error(
+                    "Hubo errores al guardar "
+                    "algunos alumnos."
+                )
+
+                for error in errores:
+
+                    st.write(
+                        f"• {error}"
+                    )
+
+
+            if guardados == len(
+                resultados
+            ):
+
+                st.balloons()
+
+                # Limpiar caché para que seguimiento
+                # lea datos actualizados
+                st.cache_data.clear()
 
 
 # =========================================================
@@ -1116,10 +1251,6 @@ elif pagina == "Seguimiento":
                 errors="coerce"
             )
 
-
-    # -----------------------------------------------------
-    # BLOQUE
-    # -----------------------------------------------------
 
     bloque_analisis = st.selectbox(
         "Bloque",
@@ -1223,8 +1354,16 @@ elif pagina == "Seguimiento":
     )
 
 
-    col1, col2, col3 = (
-        st.columns(3)
+    volumen_planificado_total = (
+        resumen[
+            "Volumen planificado"
+        ].sum()
+    )
+
+    carga_planificada_total = (
+        resumen[
+            "Carga planificada"
+        ].sum()
     )
 
 
@@ -1233,10 +1372,10 @@ elif pagina == "Seguimiento":
             "Volumen real"
         ].sum()
         /
-        resumen[
-            "Volumen planificado"
-        ].sum()
+        volumen_planificado_total
         * 100
+        if volumen_planificado_total > 0
+        else 0
     )
 
 
@@ -1245,10 +1384,10 @@ elif pagina == "Seguimiento":
             "Carga real"
         ].sum()
         /
-        resumen[
-            "Carga planificada"
-        ].sum()
+        carga_planificada_total
         * 100
+        if carga_planificada_total > 0
+        else 0
     )
 
 
@@ -1256,6 +1395,11 @@ elif pagina == "Seguimiento":
         resumen[
             "RPE real"
         ].mean()
+    )
+
+
+    col1, col2, col3 = (
+        st.columns(3)
     )
 
 
@@ -1277,18 +1421,18 @@ elif pagina == "Seguimiento":
     )
 
 
+    st.divider()
+
+
     # =====================================================
     # GRÁFICAS
     # =====================================================
-
-    st.divider()
-
 
     st.subheader(
         "Volumen"
     )
 
-    grafica_volumen = (
+    st.line_chart(
         resumen[
             [
                 "Semana",
@@ -1301,16 +1445,12 @@ elif pagina == "Seguimiento":
         )
     )
 
-    st.line_chart(
-        grafica_volumen
-    )
-
 
     st.subheader(
         "RPE"
     )
 
-    grafica_rpe = (
+    st.line_chart(
         resumen[
             [
                 "Semana",
@@ -1323,16 +1463,12 @@ elif pagina == "Seguimiento":
         )
     )
 
-    st.line_chart(
-        grafica_rpe
-    )
-
 
     st.subheader(
         "Carga"
     )
 
-    grafica_carga = (
+    st.line_chart(
         resumen[
             [
                 "Semana",
@@ -1343,10 +1479,6 @@ elif pagina == "Seguimiento":
         .set_index(
             "Semana"
         )
-    )
-
-    st.line_chart(
-        grafica_carga
     )
 
 
@@ -1418,10 +1550,6 @@ elif pagina == "Alertas":
 
         st.stop()
 
-
-    # -----------------------------------------------------
-    # ÚLTIMO REGISTRO POR ALUMNO
-    # -----------------------------------------------------
 
     df_alertas[
         "Semana"
