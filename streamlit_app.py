@@ -3198,30 +3198,30 @@ elif pagina == "Vista grupo":
         *
         100
     )
-# =====================================================
-# DIFERENCIA RPE
-# =====================================================
+    # =====================================================
+    # DIFERENCIA RPE
+    # =====================================================
 
-resumen_grupo["RPE planificado"] = pd.to_numeric(
-    resumen_grupo["RPE planificado"],
-    errors="coerce"
-)
+    resumen_grupo["RPE planificado"] = pd.to_numeric(
+        resumen_grupo["RPE planificado"],
+        errors="coerce"
+    )
 
-resumen_grupo["RPE real"] = pd.to_numeric(
-    resumen_grupo["RPE real"],
-    errors="coerce"
-)
+    resumen_grupo["RPE real"] = pd.to_numeric(
+        resumen_grupo["RPE real"],
+        errors="coerce"
+    )
 
-resumen_grupo["Dif. RPE"] = (
-    resumen_grupo["RPE real"]
-    -
-    resumen_grupo["RPE planificado"]
-)
+    resumen_grupo["Dif. RPE"] = (
+        resumen_grupo["RPE real"]
+        -
+        resumen_grupo["RPE planificado"]
+    )
 
-resumen_grupo["Dif. RPE"] = pd.to_numeric(
-    resumen_grupo["Dif. RPE"],
-    errors="coerce"
-)
+    resumen_grupo["Dif. RPE"] = pd.to_numeric(
+        resumen_grupo["Dif. RPE"],
+        errors="coerce"
+    )
 
     resumen_grupo = resumen_grupo.replace(
         [
