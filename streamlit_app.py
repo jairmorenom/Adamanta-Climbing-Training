@@ -179,11 +179,8 @@ def api_headers():
     token = obtener_access_token()
 
     return {
-        "Authorization":
-            f"Bearer {token}",
-
-        "Content-Type":
-            "application/json"
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
     }
 
 
@@ -210,7 +207,6 @@ def sheets_get(rango):
         timeout=20
     )
 
-
     if respuesta.status_code == 401:
 
         st.error(
@@ -223,7 +219,6 @@ def sheets_get(rango):
 
         st.stop()
 
-
     if respuesta.status_code == 403:
 
         st.error(
@@ -232,7 +227,6 @@ def sheets_get(rango):
         )
 
         st.stop()
-
 
     respuesta.raise_for_status()
 
@@ -259,7 +253,6 @@ def sheets_update(
         "?valueInputOption=USER_ENTERED"
     )
 
-
     respuesta = requests.put(
         url,
         headers=api_headers(),
@@ -270,7 +263,6 @@ def sheets_update(
         },
         timeout=20
     )
-
 
     respuesta.raise_for_status()
 
@@ -295,7 +287,6 @@ def sheets_append(
         "&insertDataOption=INSERT_ROWS"
     )
 
-
     respuesta = requests.post(
         url,
         headers=api_headers(),
@@ -305,7 +296,6 @@ def sheets_append(
         },
         timeout=20
     )
-
 
     respuesta.raise_for_status()
 
@@ -333,62 +323,20 @@ def guardar_historial(
         "'Historial semanal'!A:J"
     )
 
-
     nueva_fila = [
-
         int(semana),
-
         int(sesion),
-
         str(alumno),
-
         str(tipo_sesion),
-
-        float(
-            round(
-                volumen_planificado,
-                1
-            )
-        ),
-
-        int(
-            volumen_real
-        ),
-
-        float(
-            round(
-                rpe_planificado,
-                1
-            )
-        ),
-
-        int(
-            rpe_real
-        ),
-
-        float(
-            round(
-                carga_planificada,
-                1
-            )
-        ),
-
-        float(
-            round(
-                carga_real,
-                1
-            )
-        )
+        float(round(volumen_planificado, 1)),
+        int(volumen_real),
+        float(round(rpe_planificado, 1)),
+        int(rpe_real),
+        float(round(carga_planificada, 1)),
+        float(round(carga_real, 1))
     ]
 
-
     fila_encontrada = None
-
-
-    # -------------------------------------
-    # EVITAR DUPLICADOS
-    # Semana + Sesión + Alumno
-    # -------------------------------------
 
     for numero_fila, fila in enumerate(
         valores[1:],
@@ -398,19 +346,14 @@ def guardar_historial(
         if len(fila) < 3:
             continue
 
-
         try:
 
             semana_existente = int(
-                float(
-                    fila[0]
-                )
+                float(fila[0])
             )
 
             sesion_existente = int(
-                float(
-                    fila[1]
-                )
+                float(fila[1])
             )
 
         except (
@@ -420,65 +363,37 @@ def guardar_historial(
 
             continue
 
-
         alumno_existente = (
-            str(
-                fila[2]
-            )
+            str(fila[2])
             .strip()
             .lower()
         )
 
-
         if (
-            semana_existente
-            == int(semana)
-
-            and sesion_existente
-            == int(sesion)
-
+            semana_existente == int(semana)
+            and sesion_existente == int(sesion)
             and alumno_existente
-            == str(alumno)
-            .strip()
-            .lower()
+            == str(alumno).strip().lower()
         ):
 
-            fila_encontrada = (
-                numero_fila
-            )
-
+            fila_encontrada = numero_fila
             break
-
-
-    # -------------------------------------
-    # ACTUALIZAR
-    # -------------------------------------
 
     if fila_encontrada:
 
         sheets_update(
             (
                 "'Historial semanal'!"
-                f"A{fila_encontrada}:"
-                f"J{fila_encontrada}"
+                f"A{fila_encontrada}:J{fila_encontrada}"
             ),
-            [
-                nueva_fila
-            ]
+            [nueva_fila]
         )
 
         return "actualizado"
 
-
-    # -------------------------------------
-    # NUEVO
-    # -------------------------------------
-
     sheets_append(
         "'Historial semanal'!A:J",
-        [
-            nueva_fila
-        ]
+        [nueva_fila]
     )
 
     return "creado"
@@ -494,8 +409,6 @@ def clasificar_estado(
     dif_rpe
 ):
 
-    # ALTA
-
     if (
         dif_rpe >= 2
         or carga_pct > 120
@@ -503,9 +416,6 @@ def clasificar_estado(
     ):
 
         return "ALTA"
-
-
-    # REVISAR
 
     if (
         dif_rpe <= -2
@@ -515,23 +425,15 @@ def clasificar_estado(
 
         return "REVISAR"
 
-
-    # MONITOREAR
-
     if (
         75 <= carga_pct < 85
         or 115 < carga_pct <= 120
-
         or 75 <= volumen_pct < 85
         or 115 < volumen_pct <= 120
-
-        or 1 <= abs(
-            dif_rpe
-        ) < 2
+        or 1 <= abs(dif_rpe) < 2
     ):
 
         return "MONITOREAR"
-
 
     return "OK"
 
@@ -547,9 +449,6 @@ def generar_estado(
 ):
 
     mensajes = []
-
-
-    # RPE
 
     if dif_rpe >= 2:
 
@@ -575,9 +474,6 @@ def generar_estado(
             "RPE ligeramente por debajo del plan"
         )
 
-
-    # VOLUMEN
-
     if volumen_pct < 70:
 
         mensajes.append(
@@ -601,9 +497,6 @@ def generar_estado(
         mensajes.append(
             "Volumen ligeramente alto"
         )
-
-
-    # CARGA
 
     if carga_pct < 70:
 
@@ -629,11 +522,9 @@ def generar_estado(
             "Carga ligeramente alta"
         )
 
-
     if not mensajes:
 
         return "Dentro de rango"
-
 
     return " | ".join(
         mensajes
@@ -659,7 +550,6 @@ def generar_recomendacion(
                 "y revisar recuperación"
             )
 
-
         if volumen_pct < 85:
 
             return (
@@ -667,12 +557,10 @@ def generar_recomendacion(
                 "y calidad de ejecución"
             )
 
-
         return (
             "Reducir ligeramente intensidad "
             "y monitorear recuperación"
         )
-
 
     if carga_pct > 120:
 
@@ -681,14 +569,12 @@ def generar_recomendacion(
             "en la siguiente sesión"
         )
 
-
     if volumen_pct > 120:
 
         return (
             "Reducir volumen y volver "
             "al rango planificado"
         )
-
 
     if volumen_pct < 70:
 
@@ -699,12 +585,10 @@ def generar_recomendacion(
                 "revisar por qué el esfuerzo fue alto"
             )
 
-
         return (
             "Aumentar volumen progresivamente "
             "en la siguiente sesión"
         )
-
 
     if carga_pct < 70:
 
@@ -715,12 +599,10 @@ def generar_recomendacion(
                 "el estímulo de entrenamiento"
             )
 
-
         return (
             "Revisar volumen ejecutado "
             "antes de aumentar intensidad"
         )
-
 
     if 75 <= volumen_pct < 85:
 
@@ -731,12 +613,10 @@ def generar_recomendacion(
                 "y monitorear el RPE"
             )
 
-
         return (
             "Subir ligeramente el volumen "
             "en la próxima sesión"
         )
-
 
     if 75 <= carga_pct < 85:
 
@@ -747,20 +627,16 @@ def generar_recomendacion(
                 "si mantiene buena calidad"
             )
 
-
         return (
             "Mantener y observar "
             "la siguiente sesión"
         )
 
-
     if 1 <= dif_rpe < 2:
 
         return (
-            "Mantener volumen "
-            "y monitorear intensidad"
+            "Mantener volumen y monitorear intensidad"
         )
-
 
     if -2 < dif_rpe <= -1:
 
@@ -769,10 +645,7 @@ def generar_recomendacion(
             "la dificultad"
         )
 
-
-    return (
-        "Mantener planificación actual"
-    )
+    return "Mantener planificación actual"
 
 
 # =========================================================
@@ -783,23 +656,16 @@ def actualizar_seguimiento_bloque(
     bloque
 ):
 
-    # -------------------------------------
-    # LEER HISTORIAL
-    # -------------------------------------
-
     valores = sheets_get(
         "'Historial semanal'!A:J"
     )
 
-
     if len(valores) <= 1:
         return
-
 
     encabezados = valores[0]
 
     filas = []
-
 
     for fila in valores[1:]:
 
@@ -817,32 +683,21 @@ def actualizar_seguimiento_bloque(
             ]
         )
 
-
     df = pd.DataFrame(
         filas,
         columns=encabezados
     )
 
-
-    # -------------------------------------
-    # NUMÉRICOS
-    # -------------------------------------
-
     columnas_numericas = [
-
         "Semana",
         "Sesión",
-
         "Volumen planificado",
         "Volumen real",
-
         "RPE planificado",
         "RPE real",
-
         "Carga planificada",
         "Carga real"
     ]
-
 
     for columna in columnas_numericas:
 
@@ -853,44 +708,20 @@ def actualizar_seguimiento_bloque(
                 errors="coerce"
             )
 
-
-    # -------------------------------------
-    # RANGO DEL BLOQUE
-    # -------------------------------------
-
     rangos = {
-
         1: (1, 13),
         2: (14, 26),
         3: (27, 39),
         4: (40, 52)
-
     }
 
-
-    inicio, fin = (
-        rangos[
-            bloque
-        ]
-    )
-
+    inicio, fin = rangos[bloque]
 
     df_bloque = df[
-        (
-            df["Semana"]
-            >= inicio
-        )
+        (df["Semana"] >= inicio)
         &
-        (
-            df["Semana"]
-            <= fin
-        )
+        (df["Semana"] <= fin)
     ].copy()
-
-
-    # -------------------------------------
-    # LIMPIAR
-    # -------------------------------------
 
     df_bloque = (
         df_bloque
@@ -898,44 +729,31 @@ def actualizar_seguimiento_bloque(
             subset=[
                 "Semana",
                 "Alumno",
-
                 "Volumen planificado",
                 "Volumen real",
-
                 "RPE planificado",
                 "RPE real",
-
                 "Carga planificada",
                 "Carga real"
             ]
         )
     )
 
-
     if df_bloque.empty:
         return
 
-
     df_bloque["Alumno"] = (
-        df_bloque[
-            "Alumno"
-        ]
+        df_bloque["Alumno"]
         .astype(str)
         .str.strip()
         .str.title()
     )
-
 
     semana_actual = int(
         df_bloque[
             "Semana"
         ].max()
     )
-
-
-    # -------------------------------------
-    # RESUMEN
-    # -------------------------------------
 
     resumen = (
         df_bloque
@@ -944,31 +762,14 @@ def actualizar_seguimiento_bloque(
             as_index=False
         )
         .agg({
-
-            "Volumen planificado":
-                "sum",
-
-            "Volumen real":
-                "sum",
-
-            "RPE planificado":
-                "mean",
-
-            "RPE real":
-                "mean",
-
-            "Carga planificada":
-                "sum",
-
-            "Carga real":
-                "sum"
+            "Volumen planificado": "sum",
+            "Volumen real": "sum",
+            "RPE planificado": "mean",
+            "RPE real": "mean",
+            "Carga planificada": "sum",
+            "Carga real": "sum"
         })
     )
-
-
-    # -------------------------------------
-    # LEER SEGUIMIENTO EXISTENTE
-    # -------------------------------------
 
     seguimiento_existente = (
         sheets_get(
@@ -976,83 +777,43 @@ def actualizar_seguimiento_bloque(
         )
     )
 
-
-    # -------------------------------------
-    # CADA ALUMNO
-    # -------------------------------------
-
     for _, fila in resumen.iterrows():
 
-        alumno = (
-            fila["Alumno"]
-        )
+        alumno = fila["Alumno"]
 
-
-        # VOLUMEN %
-
-        if (
-            fila[
-                "Volumen planificado"
-            ] > 0
-        ):
+        if fila["Volumen planificado"] > 0:
 
             volumen_pct = (
-
-                fila[
-                    "Volumen real"
-                ]
+                fila["Volumen real"]
                 /
-                fila[
-                    "Volumen planificado"
-                ]
+                fila["Volumen planificado"]
                 * 100
-
             )
 
         else:
 
             volumen_pct = 0
 
-
-        # CARGA %
-
-        if (
-            fila[
-                "Carga planificada"
-            ] > 0
-        ):
+        if fila["Carga planificada"] > 0:
 
             carga_pct = (
-
-                fila[
-                    "Carga real"
-                ]
+                fila["Carga real"]
                 /
-                fila[
-                    "Carga planificada"
-                ]
+                fila["Carga planificada"]
                 * 100
-
             )
 
         else:
 
             carga_pct = 0
 
-
         rpe_plan = float(
-            fila[
-                "RPE planificado"
-            ]
+            fila["RPE planificado"]
         )
-
 
         rpe_real = float(
-            fila[
-                "RPE real"
-            ]
+            fila["RPE real"]
         )
-
 
         dif_rpe = (
             rpe_real
@@ -1060,114 +821,56 @@ def actualizar_seguimiento_bloque(
             rpe_plan
         )
 
-
-        # ---------------------------------
-        # ALERTAS
-        # ---------------------------------
-
-        nivel = (
-            clasificar_estado(
-                volumen_pct,
-                carga_pct,
-                dif_rpe
-            )
+        nivel = clasificar_estado(
+            volumen_pct,
+            carga_pct,
+            dif_rpe
         )
 
-
-        estado = (
-            generar_estado(
-                volumen_pct,
-                carga_pct,
-                dif_rpe
-            )
+        estado = generar_estado(
+            volumen_pct,
+            carga_pct,
+            dif_rpe
         )
 
-
-        recomendacion = (
-            generar_recomendacion(
-                volumen_pct,
-                carga_pct,
-                dif_rpe
-            )
+        recomendacion = generar_recomendacion(
+            volumen_pct,
+            carga_pct,
+            dif_rpe
         )
-
 
         nueva_fila = [
-
-            int(
-                bloque
-            ),
-
+            int(bloque),
             semana_actual,
-
             alumno,
-
-            round(
-                volumen_pct,
-                1
-            ),
-
-            round(
-                rpe_plan,
-                1
-            ),
-
-            round(
-                rpe_real,
-                1
-            ),
-
-            round(
-                dif_rpe,
-                1
-            ),
-
-            round(
-                carga_pct,
-                1
-            ),
-
+            round(volumen_pct, 1),
+            round(rpe_plan, 1),
+            round(rpe_real, 1),
+            round(dif_rpe, 1),
+            round(carga_pct, 1),
             nivel,
-
             estado,
-
             recomendacion
         ]
 
-
-        # ---------------------------------
-        # EVITAR DUPLICADOS
-        # Bloque + Semana + Alumno
-        # ---------------------------------
-
         fila_encontrada = None
-
 
         for numero_fila, existente in enumerate(
             seguimiento_existente[1:],
             start=2
         ):
 
-            if len(
-                existente
-            ) < 3:
-
+            if len(existente) < 3:
                 continue
-
 
             try:
 
                 bloque_existente = int(
-                    float(
-                        existente[0]
-                    )
+                    float(existente[0])
                 )
 
-
                 semana_existente = int(
-                    float(
-                        existente[1]
-                    )
+                    float(existente[1])
                 )
 
             except (
@@ -1177,77 +880,38 @@ def actualizar_seguimiento_bloque(
 
                 continue
 
-
             alumno_existente = (
-
-                str(
-                    existente[2]
-                )
+                str(existente[2])
                 .strip()
                 .lower()
-
             )
 
-
             if (
-
-                bloque_existente
-                == int(
-                    bloque
-                )
-
-                and semana_existente
-                == semana_actual
-
+                bloque_existente == int(bloque)
+                and semana_existente == semana_actual
                 and alumno_existente
-                == alumno
-                .strip()
-                .lower()
-
+                == alumno.strip().lower()
             ):
 
-                fila_encontrada = (
-                    numero_fila
-                )
-
+                fila_encontrada = numero_fila
                 break
-
-
-        # ---------------------------------
-        # ACTUALIZAR
-        # ---------------------------------
 
         if fila_encontrada:
 
             sheets_update(
-
                 (
                     "'Seguimiento por bloque'!"
-                    f"A{fila_encontrada}:"
-                    f"K{fila_encontrada}"
+                    f"A{fila_encontrada}:K{fila_encontrada}"
                 ),
-
-                [
-                    nueva_fila
-                ]
+                [nueva_fila]
             )
-
-
-        # ---------------------------------
-        # NUEVO
-        # ---------------------------------
 
         else:
 
             sheets_append(
-
                 "'Seguimiento por bloque'!A:K",
-
-                [
-                    nueva_fila
-                ]
+                [nueva_fila]
             )
-
 
             seguimiento_existente.append(
                 nueva_fila
@@ -1264,29 +928,22 @@ try:
         "Distribucion semanal"
     )
 
-
     df_alumnos = leer_hoja(
         "Alumnos"
     )
 
-
     conexion_ok = True
-
 
 except Exception as error:
 
     conexion_ok = False
 
-
     st.error(
         "No se pudo leer la base de datos."
     )
 
-
     st.code(
-        str(
-            error
-        )
+        str(error)
     )
 
 
@@ -1298,11 +955,9 @@ st.sidebar.title(
     "ADAMANTA"
 )
 
-
 st.sidebar.caption(
     f"👤 {nombre_usuario}"
 )
-
 
 if conexion_ok:
 
@@ -1316,11 +971,8 @@ else:
         "Sin conexión"
     )
 
-
 pagina = st.sidebar.radio(
-
     "Navegación",
-
     [
         "Inicio",
         "Planear sesión",
@@ -1329,7 +981,6 @@ pagina = st.sidebar.radio(
         "Alertas"
     ]
 )
-
 
 if st.sidebar.button(
     "Cerrar sesión",
@@ -1344,7 +995,6 @@ if st.sidebar.button(
 # =========================================================
 
 if not conexion_ok:
-
     st.stop()
 
 
@@ -1354,9 +1004,7 @@ if not conexion_ok:
 
 df_distribucion["Semana"] = (
     pd.to_numeric(
-        df_distribucion[
-            "Semana"
-        ],
+        df_distribucion["Semana"],
         errors="coerce"
     )
 )
@@ -1366,37 +1014,25 @@ df_distribucion["Semana"] = (
 # ALUMNOS
 # =========================================================
 
-if (
-    "Nombre"
-    in df_alumnos.columns
-):
+if "Nombre" in df_alumnos.columns:
 
     alumnos = (
-
-        df_alumnos[
-            "Nombre"
-        ]
+        df_alumnos["Nombre"]
         .dropna()
         .astype(str)
         .str.strip()
         .tolist()
-
     )
 
 else:
 
     alumnos = (
-
         df_alumnos
-        .iloc[
-            :,
-            0
-        ]
+        .iloc[:, 0]
         .dropna()
         .astype(str)
         .str.strip()
         .tolist()
-
     )
 
 
@@ -1410,62 +1046,44 @@ if pagina == "Inicio":
         "ADAMANTA"
     )
 
-
     st.subheader(
         "Sistema de planificación y seguimiento"
     )
-
 
     st.caption(
         "Planificación · Carga · Seguimiento · Alertas"
     )
 
-
     st.divider()
 
-
-    col1, col2, col3 = (
-        st.columns(3)
-    )
-
+    col1, col2, col3 = st.columns(3)
 
     col1.metric(
         "Semanas programadas",
         52
     )
 
-
     col2.metric(
         "Sesiones por semana",
         4
     )
 
-
     col3.metric(
         "Alumnos",
-        len(
-            alumnos
-        )
+        len(alumnos)
     )
 
-
     st.divider()
-
 
     st.subheader(
         "Alumnos"
     )
 
-
     st.dataframe(
-
         pd.DataFrame({
-            "Alumno":
-                alumnos
+            "Alumno": alumnos
         }),
-
         use_container_width=True,
-
         hide_index=True
     )
 
@@ -1480,53 +1098,38 @@ elif pagina == "Planear sesión":
         "Planear sesión"
     )
 
-
     st.caption(
         "La programación se obtiene directamente "
         "de la base de datos."
     )
 
-
-    # --------------------------------------
-    # SEMANA + SESIÓN
-    # --------------------------------------
-
-    col1, col2 = (
-        st.columns(2)
-    )
-
+    col1, col2 = st.columns(2)
 
     with col1:
 
         semana = st.selectbox(
-
             "Semana",
-
-            list(
-                range(
-                    1,
-                    53
-                )
-            ),
-
-            index=46
+            list(range(1, 53)),
+            index=None,
+            placeholder="Selecciona una semana..."
         )
-
 
     with col2:
 
         sesion = st.selectbox(
-
             "Sesión",
-
-            [
-                1,
-                2,
-                3,
-                4
-            ]
+            [1, 2, 3, 4],
+            index=None,
+            placeholder="Selecciona una sesión..."
         )
 
+    if semana is None or sesion is None:
+
+        st.info(
+            "Selecciona una semana y una sesión para comenzar."
+        )
+
+        st.stop()
 
     bloque, nombre_bloque = (
         obtener_bloque(
@@ -1534,25 +1137,16 @@ elif pagina == "Planear sesión":
         )
     )
 
-
-    # --------------------------------------
-    # TIPO AUTOMÁTICO
-    # --------------------------------------
-
     fila_semana = (
         df_distribucion[
-            df_distribucion[
-                "Semana"
-            ]
+            df_distribucion["Semana"]
             == semana
         ]
     )
 
-
     columna_sesion = (
         f"Sesión {sesion}"
     )
-
 
     if (
         fila_semana.empty
@@ -1566,36 +1160,24 @@ elif pagina == "Planear sesión":
 
         st.stop()
 
-
     tipo_sesion = limpiar_texto(
-
         fila_semana
         .iloc[0][
             columna_sesion
         ]
-
     )
 
-
     st.info(
-
         f"Bloque {bloque} · "
         f"{nombre_bloque} · "
         f"Semana {semana} · "
         f"Sesión {sesion}"
-
     )
-
 
     st.metric(
         "Tipo de sesión",
         tipo_sesion
     )
-
-
-    # --------------------------------------
-    # EJERCICIOS
-    # --------------------------------------
 
     df_lista = leer_hoja(
         HOJAS_EJERCICIOS[
@@ -1603,16 +1185,11 @@ elif pagina == "Planear sesión":
         ]
     )
 
-
     primera_columna = (
-        df_lista.columns[
-            0
-        ]
+        df_lista.columns[0]
     )
 
-
     coincidencia = (
-
         df_lista[
             df_lista[
                 primera_columna
@@ -1623,41 +1200,27 @@ elif pagina == "Planear sesión":
             ==
             tipo_sesion.lower()
         ]
-
     )
 
-
     ejercicios = []
-
 
     if not coincidencia.empty:
 
         indice = (
-            coincidencia.index[
-                0
-            ]
+            coincidencia.index[0]
         )
-
 
         fila = (
-            df_lista.loc[
-                indice
-            ]
+            df_lista.loc[indice]
         )
 
-
         for columna in (
-            df_lista.columns[
-                1:6
-            ]
+            df_lista.columns[1:6]
         ):
 
             nombre = limpiar_texto(
-                fila[
-                    columna
-                ]
+                fila[columna]
             )
-
 
             if (
                 nombre
@@ -1672,24 +1235,15 @@ elif pagina == "Planear sesión":
                     nombre
                 )
 
-
-    # Formato alternativo
-
     if not ejercicios:
 
         for i in range(
-            len(
-                df_lista
-            )
+            len(df_lista)
         ):
 
             valor = limpiar_texto(
-                df_lista.iloc[
-                    i,
-                    0
-                ]
+                df_lista.iloc[i, 0]
             )
-
 
             if (
                 valor.lower()
@@ -1700,9 +1254,7 @@ elif pagina == "Planear sesión":
                 if (
                     i + 1
                     <
-                    len(
-                        df_lista
-                    )
+                    len(df_lista)
                 ):
 
                     fila_siguiente = (
@@ -1710,7 +1262,6 @@ elif pagina == "Planear sesión":
                             i + 1
                         ]
                     )
-
 
                     for valor_ejercicio in (
                         fila_siguiente.iloc[
@@ -1722,16 +1273,13 @@ elif pagina == "Planear sesión":
                             valor_ejercicio
                         )
 
-
                         if ejercicio:
 
                             ejercicios.append(
                                 ejercicio
                             )
 
-
                 break
-
 
     if not ejercicios:
 
@@ -1742,65 +1290,41 @@ elif pagina == "Planear sesión":
 
         st.stop()
 
-
-    # --------------------------------------
-    # SELECCIÓN
-    # --------------------------------------
-
     st.divider()
-
 
     st.subheader(
         "Ejercicios"
     )
 
-
     cantidad = st.slider(
-
         "Cantidad de ejercicios",
-
         min_value=1,
-
         max_value=min(
             5,
-            len(
-                ejercicios
-            )
+            len(ejercicios)
         ),
-
         value=min(
             3,
-            len(
-                ejercicios
-            )
+            len(ejercicios)
         )
     )
 
-
     modo = st.radio(
-
         "Modo de selección",
-
         [
             "Manual",
             "Aleatorio"
         ],
-
         horizontal=True
     )
-
 
     if modo == "Manual":
 
         seleccion = st.multiselect(
-
             "Selecciona los ejercicios",
-
             ejercicios,
-
             max_selections=cantidad
         )
-
 
     else:
 
@@ -1812,7 +1336,6 @@ elif pagina == "Planear sesión":
             f"{tipo_sesion}_"
             f"{cantidad}"
         )
-
 
         if st.button(
             "Generar selección",
@@ -1826,7 +1349,6 @@ elif pagina == "Planear sesión":
                 cantidad
             )
 
-
         seleccion = (
             st.session_state.get(
                 clave,
@@ -1834,15 +1356,9 @@ elif pagina == "Planear sesión":
             )
         )
 
-
-    # --------------------------------------
-    # CARGA
-    # --------------------------------------
-
     if seleccion:
 
         st.divider()
-
 
         df_carga = leer_hoja(
             HOJAS_CARGA[
@@ -1850,23 +1366,17 @@ elif pagina == "Planear sesión":
             ]
         )
 
-
         columnas_numericas = [
-
             "Series/Boulders",
             "Movimientos",
             "Vueltas",
             "RPE objetivo",
             "Descanso min"
-
         ]
-
 
         for columna in columnas_numericas:
 
-            if columna in (
-                df_carga.columns
-            ):
+            if columna in df_carga.columns:
 
                 df_carga[
                     columna
@@ -1877,11 +1387,9 @@ elif pagina == "Planear sesión":
                     errors="coerce"
                 )
 
-
         df_carga[
             "Volumen"
         ] = (
-
             df_carga[
                 "Series/Boulders"
             ]
@@ -1893,17 +1401,13 @@ elif pagina == "Planear sesión":
             df_carga[
                 "Vueltas"
             ]
-
         )
 
-
         filas_plan = []
-
 
         for ejercicio in seleccion:
 
             coincidencia_carga = (
-
                 df_carga[
                     df_carga[
                         "Ejercicio"
@@ -1914,24 +1418,15 @@ elif pagina == "Planear sesión":
                     ==
                     ejercicio.lower()
                 ]
-
             )
 
-
-            if (
-                coincidencia_carga.empty
-            ):
-
+            if coincidencia_carga.empty:
                 continue
-
 
             fila = (
                 coincidencia_carga
-                .iloc[
-                    0
-                ]
+                .iloc[0]
             )
-
 
             filas_plan.append({
 
@@ -1969,11 +1464,9 @@ elif pagina == "Planear sesión":
                     ]
             })
 
-
         df_plan = pd.DataFrame(
             filas_plan
         )
-
 
         if df_plan.empty:
 
@@ -1983,24 +1476,17 @@ elif pagina == "Planear sesión":
 
             st.stop()
 
-
         st.subheader(
             "Plan de la sesión"
         )
 
-
         st.dataframe(
-
             df_plan,
-
             use_container_width=True,
-
             hide_index=True
         )
 
-
         volumen_total = (
-
             pd.to_numeric(
                 df_plan[
                     "Volumen"
@@ -2008,12 +1494,9 @@ elif pagina == "Planear sesión":
                 errors="coerce"
             )
             .sum()
-
         )
 
-
         rpe_medio = (
-
             pd.to_numeric(
                 df_plan[
                     "RPE"
@@ -2021,9 +1504,7 @@ elif pagina == "Planear sesión":
                 errors="coerce"
             )
             .mean()
-
         )
-
 
         if pd.isna(
             rpe_medio
@@ -2031,43 +1512,31 @@ elif pagina == "Planear sesión":
 
             rpe_medio = 0
 
-
         carga_planificada = (
-
             volumen_total
             *
             rpe_medio
-
         )
 
-
-        col1, col2, col3 = (
-            st.columns(3)
-        )
-
+        col1, col2, col3 = st.columns(3)
 
         col1.metric(
             "Volumen planificado",
             f"{volumen_total:.0f}"
         )
 
-
         col2.metric(
             "RPE objetivo",
             f"{rpe_medio:.1f}"
         )
-
 
         col3.metric(
             "Carga planificada",
             f"{carga_planificada:.0f}"
         )
 
-
         if (
-            len(
-                seleccion
-            )
+            len(seleccion)
             ==
             cantidad
         ):
@@ -2107,7 +1576,6 @@ elif pagina == "Planear sesión":
                     )
             }
 
-
             st.success(
                 "Sesión lista para registrar."
             )
@@ -2123,11 +1591,9 @@ elif pagina == "Registrar sesión":
         "Registrar sesión"
     )
 
-
     plan = st.session_state.get(
         "sesion_planificada"
     )
-
 
     if not plan:
 
@@ -2138,54 +1604,38 @@ elif pagina == "Registrar sesión":
 
         st.stop()
 
-
     st.info(
-
         f"Semana {plan['Semana']} · "
         f"Sesión {plan['Sesión']} · "
         f"{plan['Tipo']}"
-
     )
 
-
-    col1, col2, col3 = (
-        st.columns(3)
-    )
-
+    col1, col2, col3 = st.columns(3)
 
     col1.metric(
         "Volumen planificado",
         f"{plan['Volumen']:.0f}"
     )
 
-
     col2.metric(
         "RPE objetivo",
         f"{plan['RPE']:.1f}"
     )
-
 
     col3.metric(
         "Carga planificada",
         f"{plan['Carga']:.0f}"
     )
 
-
     presentes = st.multiselect(
-
         "Alumnos presentes",
-
         alumnos,
-
         default=[]
     )
 
-
     st.divider()
 
-
     resultados = []
-
 
     for alumno in presentes:
 
@@ -2193,33 +1643,23 @@ elif pagina == "Registrar sesión":
             alumno
         )
 
-
-        col1, col2 = (
-            st.columns(2)
-        )
-
+        col1, col2 = st.columns(2)
 
         with col1:
 
             volumen_real = (
                 st.number_input(
-
                     "Volumen real",
-
                     min_value=0,
-
                     max_value=2000,
-
                     value=int(
                         plan[
                             "Volumen"
                         ]
                     ),
-
                     key=f"vol_{alumno}"
                 )
             )
-
 
         with col2:
 
@@ -2237,22 +1677,15 @@ elif pagina == "Registrar sesión":
                 )
             )
 
-
             rpe_real = (
                 st.slider(
-
                     "RPE real",
-
                     1,
-
                     10,
-
                     rpe_inicial,
-
                     key=f"rpe_{alumno}"
                 )
             )
-
 
         carga_real = (
             volumen_real
@@ -2260,12 +1693,10 @@ elif pagina == "Registrar sesión":
             rpe_real
         )
 
-
         st.caption(
             f"Carga real: "
             f"{carga_real:.0f}"
         )
-
 
         resultados.append({
 
@@ -2309,21 +1740,11 @@ elif pagina == "Registrar sesión":
                 )
         })
 
-
-    # --------------------------------------
-    # GUARDAR
-    # --------------------------------------
-
     if st.button(
-
         "Guardar sesión",
-
         type="primary",
-
         use_container_width=True
-
     ):
-
 
         if not resultados:
 
@@ -2331,20 +1752,15 @@ elif pagina == "Registrar sesión":
                 "Selecciona al menos un alumno."
             )
 
-
         else:
 
             guardados = 0
             actualizados = 0
             errores = []
 
-
             with st.spinner(
                 "Guardando sesión..."
             ):
-
-
-                # HISTORIAL SEMANAL
 
                 for resultado in resultados:
 
@@ -2393,7 +1809,6 @@ elif pagina == "Registrar sesión":
                             ]
                         )
 
-
                         if (
                             accion
                             ==
@@ -2406,18 +1821,12 @@ elif pagina == "Registrar sesión":
 
                             actualizados += 1
 
-
                     except Exception as error:
 
                         errores.append(
-
                             f"{resultado['Alumno']}: "
                             f"{str(error)}"
-
                         )
-
-
-                # SEGUIMIENTO POR BLOQUE
 
                 if not errores:
 
@@ -2429,20 +1838,12 @@ elif pagina == "Registrar sesión":
                             ]
                         )
 
-
                     except Exception as error:
 
                         errores.append(
-
                             "Seguimiento por bloque: "
                             f"{str(error)}"
-
                         )
-
-
-            # ---------------------------------
-            # RESULTADO
-            # ---------------------------------
 
             if guardados:
 
@@ -2451,7 +1852,6 @@ elif pagina == "Registrar sesión":
                     f"nuevos guardados."
                 )
 
-
             if actualizados:
 
                 st.info(
@@ -2459,30 +1859,25 @@ elif pagina == "Registrar sesión":
                     f"actualizados."
                 )
 
-
             if not errores:
 
                 st.success(
                     "✅ Historial semanal actualizado."
                 )
 
-
                 st.success(
                     "✅ Seguimiento por bloque actualizado."
                 )
 
-
                 st.cache_data.clear()
 
                 st.balloons()
-
 
             else:
 
                 st.error(
                     "Hubo problemas al guardar:"
                 )
-
 
                 for error in errores:
 
@@ -2501,80 +1896,61 @@ elif pagina == "Seguimiento":
         "Seguimiento"
     )
 
-
     df_historial = leer_hoja(
         "Historial semanal"
     )
 
-
     columnas_numericas = [
-
         "Semana",
         "Sesión",
-
         "Volumen planificado",
         "Volumen real",
-
         "RPE planificado",
         "RPE real",
-
         "Carga planificada",
         "Carga real"
     ]
 
-
     for columna in columnas_numericas:
 
-        if columna in (
-            df_historial.columns
-        ):
+        if columna in df_historial.columns:
 
             df_historial[
                 columna
             ] = pd.to_numeric(
-
                 df_historial[
                     columna
                 ],
-
                 errors="coerce"
             )
 
-
     bloque_analisis = st.selectbox(
-
         "Bloque",
-
-        [
-            1,
-            2,
-            3,
-            4
-        ],
-
-        index=3
+        [1, 2, 3, 4],
+        index=None,
+        placeholder="Selecciona un bloque..."
     )
 
+    if bloque_analisis is None:
+
+        st.info(
+            "Selecciona un bloque para consultar el seguimiento."
+        )
+
+        st.stop()
 
     rangos = {
-
         1: (1, 13),
         2: (14, 26),
         3: (27, 39),
         4: (40, 52)
-
     }
 
-
-    inicio, fin = (
-        rangos[
-            bloque_analisis
-        ]
-    )
-
+    inicio, fin = rangos[
+        bloque_analisis
+    ]
 
     df_bloque = (
-
         df_historial[
             (
                 df_historial[
@@ -2591,9 +1967,7 @@ elif pagina == "Seguimiento":
             )
         ]
         .copy()
-
     )
-
 
     if df_bloque.empty:
 
@@ -2603,11 +1977,8 @@ elif pagina == "Seguimiento":
 
         st.stop()
 
-
     alumno = st.selectbox(
-
         "Alumno",
-
         sorted(
             df_bloque[
                 "Alumno"
@@ -2615,12 +1986,20 @@ elif pagina == "Seguimiento":
             .dropna()
             .astype(str)
             .unique()
-        )
+        ),
+        index=None,
+        placeholder="Selecciona un alumno..."
     )
 
+    if alumno is None:
+
+        st.info(
+            "Selecciona un alumno para ver su seguimiento."
+        )
+
+        st.stop()
 
     df_alumno = (
-
         df_bloque[
             df_bloque[
                 "Alumno"
@@ -2629,43 +2008,29 @@ elif pagina == "Seguimiento":
             ==
             alumno
         ]
-
     )
 
-
     resumen = (
-
         df_alumno
-
         .groupby(
             "Semana",
             as_index=False
         )
-
         .agg({
-
             "Volumen planificado":
                 "sum",
-
             "Volumen real":
                 "sum",
-
             "RPE planificado":
                 "mean",
-
             "RPE real":
                 "mean",
-
             "Carga planificada":
                 "sum",
-
             "Carga real":
                 "sum"
-
         })
-
     )
-
 
     volumen_plan = (
         resumen[
@@ -2674,7 +2039,6 @@ elif pagina == "Seguimiento":
         .sum()
     )
 
-
     carga_plan = (
         resumen[
             "Carga planificada"
@@ -2682,9 +2046,7 @@ elif pagina == "Seguimiento":
         .sum()
     )
 
-
     volumen_pct = (
-
         resumen[
             "Volumen real"
         ]
@@ -2698,9 +2060,7 @@ elif pagina == "Seguimiento":
         else 0
     )
 
-
     carga_pct = (
-
         resumen[
             "Carga real"
         ]
@@ -2714,7 +2074,6 @@ elif pagina == "Seguimiento":
         else 0
     )
 
-
     rpe_real = (
         resumen[
             "RPE real"
@@ -2722,40 +2081,30 @@ elif pagina == "Seguimiento":
         .mean()
     )
 
-
-    col1, col2, col3 = (
-        st.columns(3)
-    )
-
+    col1, col2, col3 = st.columns(3)
 
     col1.metric(
         "Volumen",
         f"{volumen_pct:.1f}%"
     )
 
-
     col2.metric(
         "RPE medio",
         f"{rpe_real:.1f}"
     )
-
 
     col3.metric(
         "Carga",
         f"{carga_pct:.1f}%"
     )
 
-
     st.divider()
-
 
     st.subheader(
         "Volumen"
     )
 
-
     st.line_chart(
-
         resumen[
             [
                 "Semana",
@@ -2766,17 +2115,13 @@ elif pagina == "Seguimiento":
         .set_index(
             "Semana"
         )
-
     )
-
 
     st.subheader(
         "RPE"
     )
 
-
     st.line_chart(
-
         resumen[
             [
                 "Semana",
@@ -2787,17 +2132,13 @@ elif pagina == "Seguimiento":
         .set_index(
             "Semana"
         )
-
     )
-
 
     st.subheader(
         "Carga"
     )
 
-
     st.line_chart(
-
         resumen[
             [
                 "Semana",
@@ -2808,7 +2149,6 @@ elif pagina == "Seguimiento":
         .set_index(
             "Semana"
         )
-
     )
 
 
@@ -2822,31 +2162,27 @@ elif pagina == "Alertas":
         "Alertas y recomendaciones"
     )
 
-
     df_seguimiento = leer_hoja(
         "Seguimiento por bloque"
     )
 
-
     bloque_alertas = st.selectbox(
-
         "Bloque",
-
-        [
-            1,
-            2,
-            3,
-            4
-        ],
-
-        index=3,
-
+        [1, 2, 3, 4],
+        index=None,
+        placeholder="Selecciona un bloque...",
         key="bloque_alertas"
     )
 
+    if bloque_alertas is None:
+
+        st.info(
+            "Selecciona un bloque para consultar las alertas."
+        )
+
+        st.stop()
 
     df_alertas = (
-
         df_seguimiento[
             pd.to_numeric(
                 df_seguimiento[
@@ -2858,9 +2194,7 @@ elif pagina == "Alertas":
             bloque_alertas
         ]
         .copy()
-
     )
-
 
     if df_alertas.empty:
 
@@ -2870,43 +2204,28 @@ elif pagina == "Alertas":
 
         st.stop()
 
-
     df_alertas[
         "Semana"
     ] = pd.to_numeric(
-
         df_alertas[
             "Semana"
         ],
-
         errors="coerce"
     )
 
-
-    # Último seguimiento por alumno
-
     df_alertas = (
-
         df_alertas
-
         .sort_values(
             "Semana"
         )
-
         .groupby(
             "Alumno",
             as_index=False
         )
-
         .tail(1)
-
     )
 
-
-    for _, fila in (
-        df_alertas.iterrows()
-    ):
-
+    for _, fila in df_alertas.iterrows():
 
         alumno = limpiar_texto(
             fila.get(
@@ -2914,65 +2233,42 @@ elif pagina == "Alertas":
             )
         )
 
-
         nivel = limpiar_texto(
             fila.get(
                 "Nivel"
             )
         )
 
-
         with st.expander(
             f"{alumno} · {nivel}"
         ):
 
-
-            col1, col2, col3 = (
-                st.columns(3)
-            )
-
+            col1, col2, col3 = st.columns(3)
 
             col1.metric(
-
                 "Volumen",
-
                 f"{fila.get('Volumen %', 0)}%"
-
             )
 
-
             col2.metric(
-
                 "RPE real",
-
                 fila.get(
                     "RPE real",
                     "-"
                 )
-
             )
-
 
             col3.metric(
-
                 "Carga",
-
                 f"{fila.get('Carga %', 0)}%"
-
             )
-
 
             st.write(
-
                 "**Estado:** "
                 f"{fila.get('Estado', '')}"
-
             )
 
-
             st.info(
-
                 "Recomendación: "
                 f"{fila.get('Recomendación', '')}"
-
             )
