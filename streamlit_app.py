@@ -3327,6 +3327,667 @@ elif pagina == "Seguimiento":
             "Se necesitan al menos 2 semanas registradas "
             "para interpretar la tendencia Volumen–RPE."
         )
+            # =====================================================
+    # PERFIL DE CARGA POR TIPO DE SESIÓN
+    # =====================================================
+
+    st.divider()
+
+    st.subheader(
+        "Perfil de carga por tipo de sesión"
+    )
+
+    st.caption(
+        "Analiza qué tipos de entrenamiento están aportando "
+        "más carga al bloque y cuánto se ejecutó respecto al plan."
+    )
+
+
+    # =====================================================
+    # PREPARAR DATOS
+    # =====================================================
+
+    df_tipo = (
+        df_alumno[
+            [
+                "Tipo de sesión",
+                "Volumen planificado",
+                "Volumen real",
+                "RPE planificado",
+                "RPE real",
+                "Carga planificada",
+                "Carga real"
+            ]
+        ]
+        .copy()
+    )
+
+    df_tipo = df_tipo.dropna(
+        subset=[
+            "Tipo de sesión"
+        ]
+    )
+
+    df_tipo[
+        "Tipo de sesión"
+    ] = (
+        df_tipo[
+            "Tipo de sesión"
+        ]
+        .astype(str)
+        .str.strip()
+    )
+
+
+    # =====================================================
+    # AGRUPAR POR TIPO DE SESIÓN
+    # =====================================================
+
+    perfil_tipo = (
+        df_tipo
+        .groupby(
+            "Tipo de sesión",
+            as_index=False
+        )
+        .agg({
+            "Volumen planificado": "sum",
+            "Volumen real": "sum",
+            "RPE planificado": "mean",
+            "RPE real": "mean",
+            "Carga planificada": "sum",
+            "Carga real": "sum"
+        })
+    )
+
+
+    # =====================================================
+    # MÉTRICAS DERIVADAS
+    # =====================================================
+
+    perfil_tipo["Volumen %"] = (
+        perfil_tipo["Volumen real"]
+        /
+        perfil_tipo["Volumen planificado"]
+        *
+        100
+    )
+
+    perfil_tipo["Carga %"] = (
+        perfil_tipo["Carga real"]
+        /
+        perfil_tipo["Carga planificada"]
+        *
+        100
+    )
+
+    perfil_tipo["Dif. RPE"] = (
+        perfil_tipo["RPE real"]
+        -
+        perfil_tipo["RPE planificado"]
+    )
+
+
+    perfil_tipo = perfil_tipo.replace(
+        [
+            float("inf"),
+            float("-inf")
+        ],
+        pd.NA
+    )
+
+
+    # =====================================================
+    # PARTICIPACIÓN EN LA CARGA TOTAL
+    # =====================================================
+
+    carga_total_tipo = (
+        perfil_tipo[
+            "Carga real"
+        ]
+        .sum()
+    )
+
+    if carga_total_tipo > 0:
+
+        perfil_tipo[
+            "Participación carga %"
+        ] = (
+            perfil_tipo[
+                "Carga real"
+            ]
+            /
+            carga_total_tipo
+            *
+            100
+        )
+
+    else:
+
+        perfil_tipo[
+            "Participación carga %"
+        ] = 0
+
+
+    # =====================================================
+    # KPIs
+    # =====================================================
+
+    if not perfil_tipo.empty:
+
+        tipo_mayor_carga = (
+            perfil_tipo
+            .sort_values(
+                "Carga real",
+                ascending=False
+            )
+            .iloc[0]
+        )
+
+        tipo_mayor_rpe = (
+            perfil_tipo
+            .sort_values(
+                "RPE real",
+                ascending=False
+            )
+            .iloc[0]
+        )
+
+        tipo_mayor_desviacion = (
+            perfil_tipo
+            .assign(
+                Desviacion_abs=lambda x:
+                    x["Dif. RPE"].abs()
+            )
+            .sort_values(
+                "Desviacion_abs",
+                ascending=False
+            )
+            .iloc[0]
+        )
+
+
+        col1, col2, col3 = (
+            st.columns(3)
+        )
+
+
+        col1.metric(
+            "Mayor carga",
+            tipo_mayor_carga[
+                "Tipo de sesión"
+            ],
+            delta=(
+                f"{tipo_mayor_carga['Participación carga %']:.1f}% "
+                "de la carga total"
+            )
+        )
+
+
+        col2.metric(
+            "Mayor RPE",
+            tipo_mayor_rpe[
+                "Tipo de sesión"
+            ],
+            delta=(
+                f"RPE {tipo_mayor_rpe['RPE real']:.1f}"
+            ),
+            delta_color="off"
+        )
+
+
+        col3.metric(
+            "Mayor desviación de RPE",
+            tipo_mayor_desviacion[
+                "Tipo de sesión"
+            ],
+            delta=(
+                f"{tipo_mayor_desviacion['Dif. RPE']:+.1f} "
+                "vs plan"
+            ),
+            delta_color="inverse"
+        )
+
+
+    # =====================================================
+    # TABS
+    # =====================================================
+
+    tab_tipo_carga, tab_tipo_cumplimiento, tab_tipo_rpe = (
+        st.tabs(
+            [
+                "Carga por tipo",
+                "Cumplimiento",
+                "RPE por tipo"
+            ]
+        )
+    )
+
+
+    # =====================================================
+    # CARGA POR TIPO
+    # =====================================================
+
+    with tab_tipo_carga:
+
+        st.subheader(
+            "Distribución de carga real"
+        )
+
+        grafica_carga_tipo = (
+            alt.Chart(
+                perfil_tipo
+            )
+            .mark_bar()
+            .encode(
+
+                x=alt.X(
+                    "Carga real:Q",
+                    title="Carga real"
+                ),
+
+                y=alt.Y(
+                    "Tipo de sesión:N",
+                    title="",
+                    sort="-x"
+                ),
+
+                tooltip=[
+                    alt.Tooltip(
+                        "Tipo de sesión:N",
+                        title="Tipo"
+                    ),
+
+                    alt.Tooltip(
+                        "Carga real:Q",
+                        title="Carga real",
+                        format=".0f"
+                    ),
+
+                    alt.Tooltip(
+                        "Participación carga %:Q",
+                        title="% de la carga total",
+                        format=".1f"
+                    ),
+
+                    alt.Tooltip(
+                        "RPE real:Q",
+                        title="RPE medio",
+                        format=".1f"
+                    )
+                ]
+            )
+            .properties(
+                height=max(
+                    280,
+                    len(
+                        perfil_tipo
+                    ) * 45
+                )
+            )
+        )
+
+        st.altair_chart(
+            grafica_carga_tipo,
+            use_container_width=True
+        )
+
+        st.caption(
+            "Permite detectar qué tipos de sesión están "
+            "aportando la mayor proporción de carga del bloque."
+        )
+
+
+    # =====================================================
+    # CUMPLIMIENTO PLAN VS REAL
+    # =====================================================
+
+    with tab_tipo_cumplimiento:
+
+        st.subheader(
+            "Carga planificada vs real"
+        )
+
+        carga_tipo_long = (
+            perfil_tipo[
+                [
+                    "Tipo de sesión",
+                    "Carga planificada",
+                    "Carga real"
+                ]
+            ]
+            .melt(
+                id_vars="Tipo de sesión",
+                var_name="Tipo",
+                value_name="Carga"
+            )
+        )
+
+        grafica_cumplimiento_tipo = (
+            alt.Chart(
+                carga_tipo_long
+            )
+            .mark_bar()
+            .encode(
+
+                x=alt.X(
+                    "Carga:Q",
+                    title="Carga"
+                ),
+
+                y=alt.Y(
+                    "Tipo de sesión:N",
+                    title="",
+                    sort="-x"
+                ),
+
+                color=alt.Color(
+                    "Tipo:N",
+                    title=""
+                ),
+
+                xOffset="Tipo:N",
+
+                tooltip=[
+                    alt.Tooltip(
+                        "Tipo de sesión:N",
+                        title="Sesión"
+                    ),
+
+                    alt.Tooltip(
+                        "Tipo:N",
+                        title=""
+                    ),
+
+                    alt.Tooltip(
+                        "Carga:Q",
+                        title="Carga",
+                        format=".0f"
+                    )
+                ]
+            )
+            .properties(
+                height=max(
+                    280,
+                    len(
+                        perfil_tipo
+                    ) * 55
+                )
+            )
+        )
+
+        st.altair_chart(
+            grafica_cumplimiento_tipo,
+            use_container_width=True
+        )
+
+
+        st.subheader(
+            "Cumplimiento por tipo"
+        )
+
+        tabla_tipo = perfil_tipo[
+            [
+                "Tipo de sesión",
+                "Volumen %",
+                "Carga %",
+                "RPE planificado",
+                "RPE real",
+                "Dif. RPE"
+            ]
+        ].copy()
+
+        tabla_tipo[
+            "Volumen %"
+        ] = (
+            tabla_tipo[
+                "Volumen %"
+            ]
+            .round(1)
+        )
+
+        tabla_tipo[
+            "Carga %"
+        ] = (
+            tabla_tipo[
+                "Carga %"
+            ]
+            .round(1)
+        )
+
+        tabla_tipo[
+            "RPE planificado"
+        ] = (
+            tabla_tipo[
+                "RPE planificado"
+            ]
+            .round(1)
+        )
+
+        tabla_tipo[
+            "RPE real"
+        ] = (
+            tabla_tipo[
+                "RPE real"
+            ]
+            .round(1)
+        )
+
+        tabla_tipo[
+            "Dif. RPE"
+        ] = (
+            tabla_tipo[
+                "Dif. RPE"
+            ]
+            .round(1)
+        )
+
+        st.dataframe(
+            tabla_tipo,
+            use_container_width=True,
+            hide_index=True
+        )
+
+
+    # =====================================================
+    # RPE POR TIPO
+    # =====================================================
+
+    with tab_tipo_rpe:
+
+        st.subheader(
+            "RPE planificado vs real por tipo de sesión"
+        )
+
+        rpe_tipo_long = (
+            perfil_tipo[
+                [
+                    "Tipo de sesión",
+                    "RPE planificado",
+                    "RPE real"
+                ]
+            ]
+            .melt(
+                id_vars="Tipo de sesión",
+                var_name="Tipo",
+                value_name="RPE"
+            )
+        )
+
+        grafica_rpe_tipo = (
+            alt.Chart(
+                rpe_tipo_long
+            )
+            .mark_bar()
+            .encode(
+
+                x=alt.X(
+                    "Tipo de sesión:N",
+                    title="Tipo de sesión"
+                ),
+
+                y=alt.Y(
+                    "RPE:Q",
+                    title="RPE",
+                    scale=alt.Scale(
+                        domain=[
+                            0,
+                            10
+                        ]
+                    )
+                ),
+
+                color=alt.Color(
+                    "Tipo:N",
+                    title=""
+                ),
+
+                xOffset="Tipo:N",
+
+                tooltip=[
+                    alt.Tooltip(
+                        "Tipo de sesión:N",
+                        title="Sesión"
+                    ),
+
+                    alt.Tooltip(
+                        "Tipo:N",
+                        title=""
+                    ),
+
+                    alt.Tooltip(
+                        "RPE:Q",
+                        title="RPE",
+                        format=".1f"
+                    )
+                ]
+            )
+            .properties(
+                height=400
+            )
+        )
+
+        st.altair_chart(
+            grafica_rpe_tipo,
+            use_container_width=True
+        )
+
+
+    # =====================================================
+    # INTERPRETACIÓN PARA EL COACH
+    # =====================================================
+
+    st.subheader(
+        "Lectura del bloque"
+    )
+
+
+    for _, fila_tipo in perfil_tipo.iterrows():
+
+        tipo = (
+            fila_tipo[
+                "Tipo de sesión"
+            ]
+        )
+
+        volumen_pct = (
+            fila_tipo[
+                "Volumen %"
+            ]
+        )
+
+        carga_pct = (
+            fila_tipo[
+                "Carga %"
+            ]
+        )
+
+        dif_rpe = (
+            fila_tipo[
+                "Dif. RPE"
+            ]
+        )
+
+
+        # ---------------------------------------------
+        # DEMASIADO EXIGENTE
+        # ---------------------------------------------
+
+        if (
+            carga_pct > 115
+            and dif_rpe >= 1
+        ):
+
+            st.error(
+                f"🔴 **{tipo}:** carga {carga_pct:.1f}% "
+                f"y ΔRPE {dif_rpe:+.1f}. "
+                "Este estímulo está siendo más exigente "
+                "de lo previsto."
+            )
+
+
+        # ---------------------------------------------
+        # POCO ESTÍMULO
+        # ---------------------------------------------
+
+        elif (
+            carga_pct < 85
+            and dif_rpe <= 0
+        ):
+
+            st.info(
+                f"🔵 **{tipo}:** carga {carga_pct:.1f}% "
+                f"y ΔRPE {dif_rpe:+.1f}. "
+                "El estímulo ejecutado está por debajo "
+                "de lo planificado."
+            )
+
+
+        # ---------------------------------------------
+        # MENOS VOLUMEN PERO ALTO RPE
+        # ---------------------------------------------
+
+        elif (
+            volumen_pct < 85
+            and dif_rpe >= 1
+        ):
+
+            st.warning(
+                f"🟠 **{tipo}:** solo se completó "
+                f"{volumen_pct:.1f}% del volumen, pero el "
+                f"RPE estuvo {dif_rpe:+.1f} sobre el plan. "
+                "Conviene revisar la dificultad del estímulo."
+            )
+
+
+        # ---------------------------------------------
+        # CORRECTO
+        # ---------------------------------------------
+
+        elif (
+            90 <= carga_pct <= 110
+            and abs(dif_rpe) < 1
+        ):
+
+            st.success(
+                f"✅ **{tipo}:** respuesta acorde al plan "
+                f"(Carga {carga_pct:.1f}% · "
+                f"ΔRPE {dif_rpe:+.1f})."
+            )
+
+
+        # ---------------------------------------------
+        # INTERMEDIO
+        # ---------------------------------------------
+
+        else:
+
+            st.info(
+                f"🟡 **{tipo}:** "
+                f"Volumen {volumen_pct:.1f}% · "
+                f"Carga {carga_pct:.1f}% · "
+                f"ΔRPE {dif_rpe:+.1f}. "
+                "Continuar monitoreando."
+            )
 # =========================================================
 # VISTA GRUPO
 # =========================================================
