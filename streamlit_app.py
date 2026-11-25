@@ -1374,6 +1374,7 @@ pagina = st.sidebar.radio(
     [
         "Inicio",
         "Planear sesión",
+        "Acondicionamiento físico",
         "Registrar sesión",
         "Seguimiento",
         "Vista grupo",
@@ -1982,18 +1983,28 @@ elif pagina == "Planear sesión":
 # =========================================================
 # ACONDICIONAMIENTO FÍSICO
 # =========================================================
-
 elif pagina == "Acondicionamiento físico":
 
-    st.title(
-        "Acondicionamiento físico"
+    st.title("Acondicionamiento físico")
+
+    if not BASE_FISICO_CONECTADA:
+
+        st.error(
+            "No se pudo conectar con la base de "
+            "acondicionamiento físico."
+        )
+
+        st.code(ERROR_BASE_FISICO)
+        st.stop()
+
+    st.success(
+        "✅ Base de acondicionamiento físico conectada"
     )
 
-    st.caption(
-        "Base de ejercicios y planificación física "
-        "integrada con las sesiones de escalada."
+    st.write(
+        "Ejercicios cargados:",
+        len(df_ejercicios_fisico)
     )
-
 
     # =====================================================
     # ESTADO DE CONEXIÓN
