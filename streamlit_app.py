@@ -157,28 +157,66 @@ def obtener_reglas_fisico(df_reglas):
 
     for _, fila in df_reglas.iterrows():
 
+        valores = [
+            limpiar_texto(valor)
+            for valor in fila.tolist()
+        ]
+
+        # =================================================
+        # FACTORES ANTES / DESPUÉS
+        # =================================================
+
+        for indice, valor in enumerate(valores):
+
+            valor_normalizado = (
+                valor
+                .strip()
+                .lower()
+            )
+
+            if valor_normalizado == "antes":
+
+                if indice + 1 < len(fila):
+
+                    factor = pd.to_numeric(
+                        fila.iloc[indice + 1],
+                        errors="coerce"
+                    )
+
+                    if not pd.isna(factor):
+
+                        factores["Antes"] = float(
+                            factor
+                        )
+
+
+            elif valor_normalizado in [
+                "después",
+                "despues"
+            ]:
+
+                if indice + 1 < len(fila):
+
+                    factor = pd.to_numeric(
+                        fila.iloc[indice + 1],
+                        errors="coerce"
+                    )
+
+                    if not pd.isna(factor):
+
+                        factores["Después"] = float(
+                            factor
+                        )
+
+
+        # =================================================
+        # UMBRALES POR ZONA
+        # =================================================
+
         nombre = limpiar_texto(
             fila.iloc[0]
         )
 
-        # FACTORES ANTES / DESPUÉS
-        if nombre in [
-            "Antes",
-            "Después"
-        ]:
-
-            factor = pd.to_numeric(
-                fila.iloc[1],
-                errors="coerce"
-            )
-
-            if not pd.isna(factor):
-
-                factores[nombre] = float(
-                    factor
-                )
-
-        # UMBRALES POR ZONA
         if nombre in ZONAS_FISICO:
 
             media = pd.to_numeric(
@@ -199,14 +237,27 @@ def obtener_reglas_fisico(df_reglas):
                 fila.iloc[4]
             )
 
-            umbrales[nombre] = {
-                "Media": float(media),
-                "Alta": float(alta),
-                "Recomendación MEDIA":
-                    recomendacion_media,
-                "Recomendación ALTA":
-                    recomendacion_alta
-            }
+
+            if (
+                not pd.isna(media)
+                and not pd.isna(alta)
+            ):
+
+                umbrales[nombre] = {
+
+                    "Media":
+                        float(media),
+
+                    "Alta":
+                        float(alta),
+
+                    "Recomendación MEDIA":
+                        recomendacion_media,
+
+                    "Recomendación ALTA":
+                        recomendacion_alta
+                }
+
 
     return factores, umbrales
 
@@ -233,11 +284,19 @@ def calcular_carga_fisica(
         clave_momento = "Después"
 
 
+    if clave_momento == "Antes":
+
+        factor_default = 1.0
+
+    else:
+
+        factor_default = 0.5
+
+
     factor = factores.get(
         clave_momento,
-        1.0
+        factor_default
     )
-
 
     carga_zonas = {
         zona: 0.0
