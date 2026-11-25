@@ -80,7 +80,20 @@ HOJAS_CARGA = {
     4: "Carga de ejercicios Bloque 4",
 }
 
+# =========================================================
+# BASE DE DATOS ACONDICIONAMIENTO FÍSICO
+# =========================================================
 
+SPREADSHEET_ID_FISICO = (
+    "1b08hMJJafom4jtrpF0yRxWMcohpR_AjhMpv9XCzmd4k"
+)
+
+HOJAS_FISICO = {
+    "ejercicios": "Ejercicios",
+    "reglas": "Reglas",
+    "sesion": "Sesión",
+    "como_usar": "Cómo usar"
+}
 # =========================================================
 # FUNCIONES GENERALES
 # =========================================================
