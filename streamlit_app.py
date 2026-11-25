@@ -107,6 +107,309 @@ def limpiar_texto(valor):
 
 
 def obtener_bloque(semana):
+    # =========================================================
+# FUNCIONES GENERALES
+# =========================================================
+
+def limpiar_texto(valor):
+
+    if pd.isna(valor):
+        return ""
+
+    return str(valor).strip()
+
+
+def obtener_bloque(semana):
+
+    if 1 <= semana <= 13:
+
+        return (
+            1,
+            "Proyección en piedra"
+        )
+
+    elif 14 <= semana <= 26:
+
+        return (
+            2,
+            "Volumen, fuerza e hipertrofia"
+        )
+
+    elif 27 <= semana <= 39:
+
+        return (
+            3,
+            "Técnica avanzada + transición a competencia"
+        )
+
+    else:
+
+        return (
+            4,
+            "Competencia + transición a roca"
+        )
+
+
+# =========================================================
+# MOTOR DE CARGA FÍSICA
+# =========================================================
+
+ZONAS_FISICO = [
+    "Dedos",
+    "Antebrazo / muñeca",
+    "Tracción (espalda/bíceps)",
+    "Empuje (pecho/tríceps)",
+    "Hombro",
+    "Core",
+    "Piernas / cadera"
+]
+
+
+def obtener_reglas_fisico(df_reglas):
+
+    factores = {}
+    umbrales = {}
+
+    for _, fila in df_reglas.iterrows():
+
+        nombre = limpiar_texto(
+            fila.iloc[0]
+        )
+
+        # FACTORES ANTES / DESPUÉS
+        if nombre in [
+            "Antes",
+            "Después"
+        ]:
+
+            factor = pd.to_numeric(
+                fila.iloc[1],
+                errors="coerce"
+            )
+
+            if not pd.isna(factor):
+
+                factores[nombre] = float(
+                    factor
+                )
+
+        # UMBRALES POR ZONA
+        if nombre in ZONAS_FISICO:
+
+            media = pd.to_numeric(
+                fila.iloc[1],
+                errors="coerce"
+            )
+
+            alta = pd.to_numeric(
+                fila.iloc[2],
+                errors="coerce"
+            )
+
+            recomendacion_media = limpiar_texto(
+                fila.iloc[3]
+            )
+
+            recomendacion_alta = limpiar_texto(
+                fila.iloc[4]
+            )
+
+            umbrales[nombre] = {
+                "Media": float(media),
+                "Alta": float(alta),
+                "Recomendación MEDIA":
+                    recomendacion_media,
+                "Recomendación ALTA":
+                    recomendacion_alta
+            }
+
+    return factores, umbrales
+
+
+def calcular_carga_fisica(
+    ejercicios_fisicos,
+    momento,
+    df_ejercicios,
+    df_reglas
+):
+
+    factores, umbrales = (
+        obtener_reglas_fisico(
+            df_reglas
+        )
+    )
+
+    if momento == "Antes de escalar":
+
+        clave_momento = "Antes"
+
+    else:
+
+        clave_momento = "Después"
+
+
+    factor = factores.get(
+        clave_momento,
+        1.0
+    )
+
+
+    carga_zonas = {
+        zona: 0.0
+        for zona in ZONAS_FISICO
+    }
+
+
+    for ejercicio in ejercicios_fisicos:
+
+        nombre_ejercicio = ejercicio[
+            "Ejercicio"
+        ]
+
+        series = float(
+            ejercicio[
+                "Series"
+            ]
+        )
+
+
+        coincidencia = (
+            df_ejercicios[
+                df_ejercicios[
+                    "Ejercicio"
+                ]
+                .astype(str)
+                .str.strip()
+                ==
+                nombre_ejercicio
+            ]
+        )
+
+
+        if coincidencia.empty:
+
+            continue
+
+
+        fila = coincidencia.iloc[0]
+
+
+        tipo = limpiar_texto(
+            fila.get(
+                "Tipo",
+                ""
+            )
+        )
+
+
+        # ACTIVACIÓN NO SUMA CARGA
+        if tipo.lower() == "activación":
+
+            continue
+
+
+        for zona in ZONAS_FISICO:
+
+            calificacion = pd.to_numeric(
+                fila.get(
+                    zona,
+                    0
+                ),
+                errors="coerce"
+            )
+
+            if pd.isna(
+                calificacion
+            ):
+
+                calificacion = 0
+
+
+            aporte = (
+                float(calificacion)
+                *
+                series
+                *
+                factor
+            )
+
+
+            carga_zonas[
+                zona
+            ] += aporte
+
+
+    resultados = {}
+
+
+    for zona in ZONAS_FISICO:
+
+        carga = carga_zonas[
+            zona
+        ]
+
+        reglas_zona = umbrales.get(
+            zona
+        )
+
+
+        if reglas_zona is None:
+
+            resultados[zona] = {
+                "Carga": carga,
+                "Nivel": "SIN REGLA",
+                "Recomendación": ""
+            }
+
+            continue
+
+
+        if carga >= reglas_zona[
+            "Alta"
+        ]:
+
+            nivel = "ALTA"
+
+            recomendacion = (
+                reglas_zona[
+                    "Recomendación ALTA"
+                ]
+            )
+
+
+        elif carga >= reglas_zona[
+            "Media"
+        ]:
+
+            nivel = "MEDIA"
+
+            recomendacion = (
+                reglas_zona[
+                    "Recomendación MEDIA"
+                ]
+            )
+
+
+        else:
+
+            nivel = "BAJA"
+
+            recomendacion = (
+                "Sin restricción específica."
+            )
+
+
+        resultados[zona] = {
+            "Carga": float(carga),
+            "Nivel": nivel,
+            "Recomendación": recomendacion
+        }
+
+
+    return {
+        "Factor": float(factor),
+        "Resultados": resultados
+    }
 
     if 1 <= semana <= 13:
 
@@ -2234,11 +2537,43 @@ elif pagina == "Planear sesión":
                             )
 
 
+                                # =================================================
+                # CALCULAR CARGA FÍSICA
+                # =================================================
+
+                resultado_carga_fisica = (
+                    calcular_carga_fisica(
+                        ejercicios_fisicos,
+                        momento_fisico,
+                        df_ejercicios_fisico,
+                        df_reglas_fisico
+                    )
+                )
+
+
+                carga_por_zona = (
+                    resultado_carga_fisica[
+                        "Resultados"
+                    ]
+                )
+
+
+                # =================================================
+                # GUARDAR ACONDICIONAMIENTO
+                # =================================================
+
                 acondicionamiento = {
                     "Activo": True,
                     "Tipo": tipo_fisico,
                     "Momento": momento_fisico,
-                    "Ejercicios": ejercicios_fisicos
+                    "Factor momento":
+                        resultado_carga_fisica[
+                            "Factor"
+                        ],
+                    "Ejercicios":
+                        ejercicios_fisicos,
+                    "Carga por zona":
+                        carga_por_zona
                 }
 
 
@@ -2248,18 +2583,34 @@ elif pagina == "Planear sesión":
 
                 if ejercicios_fisicos:
 
+                    st.divider()
+
                     st.markdown(
                         "### Resumen del acondicionamiento"
                     )
 
-                    st.write(
+                    col_f1, col_f2 = (
+                        st.columns(2)
+                    )
+
+                    col_f1.write(
                         f"**Tipo:** {tipo_fisico}"
                     )
 
-                    st.write(
+                    col_f2.write(
                         f"**Momento:** {momento_fisico}"
                     )
 
+
+                    st.caption(
+                        "Factor aplicado: "
+                        f"{resultado_carga_fisica['Factor']:.1f}"
+                    )
+
+
+                    # ---------------------------------------------
+                    # EJERCICIOS
+                    # ---------------------------------------------
 
                     for numero, ejercicio in enumerate(
                         ejercicios_fisicos,
@@ -2275,6 +2626,107 @@ elif pagina == "Planear sesión":
                             f"RPE {ejercicio['RPE objetivo']:.1f}"
                         )
 
+
+                    # =================================================
+                    # CARGA POR ZONA
+                    # =================================================
+
+                    st.markdown(
+                        "### Carga física por zona"
+                    )
+
+
+                    filas_carga = []
+
+
+                    for zona, datos in (
+                        carga_por_zona.items()
+                    ):
+
+                        filas_carga.append(
+                            {
+                                "Zona": zona,
+                                "Carga":
+                                    round(
+                                        datos[
+                                            "Carga"
+                                        ],
+                                        1
+                                    ),
+                                "Nivel":
+                                    datos[
+                                        "Nivel"
+                                    ]
+                            }
+                        )
+
+
+                    df_carga_fisica_visual = (
+                        pd.DataFrame(
+                            filas_carga
+                        )
+                    )
+
+
+                    st.dataframe(
+                        df_carga_fisica_visual,
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+
+                    # =================================================
+                    # RECOMENDACIONES
+                    # =================================================
+
+                    st.markdown(
+                        "### Recomendaciones para la escalada"
+                    )
+
+
+                    hay_alertas = False
+
+
+                    for zona, datos in (
+                        carga_por_zona.items()
+                    ):
+
+                        nivel = datos[
+                            "Nivel"
+                        ]
+
+                        recomendacion = datos[
+                            "Recomendación"
+                        ]
+
+
+                        if nivel == "ALTA":
+
+                            hay_alertas = True
+
+                            st.error(
+                                f"🔴 **{zona} · ALTA**\n\n"
+                                f"{recomendacion}"
+                            )
+
+
+                        elif nivel == "MEDIA":
+
+                            hay_alertas = True
+
+                            st.warning(
+                                f"🟠 **{zona} · MEDIA**\n\n"
+                                f"{recomendacion}"
+                            )
+
+
+                    if not hay_alertas:
+
+                        st.success(
+                            "✅ Todas las zonas están en carga BAJA. "
+                            "No hay restricciones específicas "
+                            "para la sesión de escalada."
+                        )
         # =====================================================
         # GUARDAR SESIÓN COMPLETA
         # =====================================================
