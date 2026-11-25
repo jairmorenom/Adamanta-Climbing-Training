@@ -4310,7 +4310,30 @@ elif pagina == "Registrar sesión":
         )
 
         st.stop()
+    # =====================================================
+    # ACONDICIONAMIENTO PLANIFICADO
+    # =====================================================
 
+    acondicionamiento_plan = plan.get(
+        "Acondicionamiento",
+        {}
+    )
+
+    ejercicios_fisicos_plan = (
+        acondicionamiento_plan.get(
+            "Ejercicios",
+            []
+        )
+    )
+
+    fisico_activo = (
+        acondicionamiento_plan.get(
+            "Activo",
+            False
+        )
+        and
+        len(ejercicios_fisicos_plan) > 0
+    )
     st.info(
         f"Semana {plan['Semana']} · "
         f"Sesión {plan['Sesión']} · "
@@ -4350,6 +4373,9 @@ elif pagina == "Registrar sesión":
 
     resultados = []
 
+    # Aquí guardaremos temporalmente
+    # el físico real de cada alumno
+    resultados_fisicos = []
     for alumno in presentes:
 
         st.subheader(
@@ -4453,7 +4479,267 @@ elif pagina == "Registrar sesión":
                     carga_real
                 ),
         })
+        # =================================================
+        # PASO 4B — REGISTRAR ACONDICIONAMIENTO REAL
+        # =================================================
 
+        if fisico_activo:
+
+            st.markdown(
+                "#### Acondicionamiento físico"
+            )
+
+            st.caption(
+                f"{acondicionamiento_plan.get('Tipo', '')} · "
+                f"{acondicionamiento_plan.get('Momento', '')}"
+            )
+
+
+            for indice_fisico, ejercicio_plan in enumerate(
+                ejercicios_fisicos_plan
+            ):
+
+                nombre_ejercicio_fisico = (
+                    ejercicio_plan.get(
+                        "Ejercicio",
+                        "Ejercicio"
+                    )
+                )
+
+
+                with st.expander(
+                    f"🏋️ {nombre_ejercicio_fisico}",
+                    expanded=False
+                ):
+
+                    # =========================================
+                    # PLANIFICADO
+                    # =========================================
+
+                    series_plan = int(
+                        ejercicio_plan.get(
+                            "Series",
+                            0
+                        )
+                    )
+
+                    reps_plan = int(
+                        ejercicio_plan.get(
+                            "Repeticiones",
+                            0
+                        )
+                    )
+
+                    carga_plan = float(
+                        ejercicio_plan.get(
+                            "Carga externa",
+                            0
+                        )
+                    )
+
+                    rpe_plan_fisico = float(
+                        ejercicio_plan.get(
+                            "RPE objetivo",
+                            0
+                        )
+                    )
+
+
+                    st.caption(
+                        f"Plan: "
+                        f"{series_plan} × {reps_plan} · "
+                        f"{carga_plan:.1f} kg · "
+                        f"RPE {rpe_plan_fisico:.1f}"
+                    )
+
+
+                    # =========================================
+                    # SERIES Y REPETICIONES REALES
+                    # =========================================
+
+                    col_fs1, col_fs2 = st.columns(2)
+
+
+                    series_reales_fisico = (
+                        col_fs1.number_input(
+                            "Series reales",
+                            min_value=0,
+                            max_value=20,
+                            value=series_plan,
+                            step=1,
+                            key=(
+                                f"fis_series_"
+                                f"{plan['Semana']}_"
+                                f"{plan['Sesión']}_"
+                                f"{alumno}_"
+                                f"{indice_fisico}"
+                            )
+                        )
+                    )
+
+
+                    repeticiones_reales_fisico = (
+                        col_fs2.number_input(
+                            "Repeticiones reales",
+                            min_value=0,
+                            max_value=100,
+                            value=reps_plan,
+                            step=1,
+                            key=(
+                                f"fis_reps_"
+                                f"{plan['Semana']}_"
+                                f"{plan['Sesión']}_"
+                                f"{alumno}_"
+                                f"{indice_fisico}"
+                            )
+                        )
+                    )
+
+
+                    # =========================================
+                    # CARGA Y RPE REALES
+                    # =========================================
+
+                    col_fs3, col_fs4 = st.columns(2)
+
+
+                    carga_real_fisico = (
+                        col_fs3.number_input(
+                            "Carga externa real (kg)",
+                            min_value=0.0,
+                            value=carga_plan,
+                            step=0.5,
+                            key=(
+                                f"fis_carga_"
+                                f"{plan['Semana']}_"
+                                f"{plan['Sesión']}_"
+                                f"{alumno}_"
+                                f"{indice_fisico}"
+                            )
+                        )
+                    )
+
+
+                    rpe_real_fisico = (
+                        col_fs4.number_input(
+                            "RPE real",
+                            min_value=0.0,
+                            max_value=10.0,
+                            value=rpe_plan_fisico,
+                            step=0.5,
+                            key=(
+                                f"fis_rpe_"
+                                f"{plan['Semana']}_"
+                                f"{plan['Sesión']}_"
+                                f"{alumno}_"
+                                f"{indice_fisico}"
+                            )
+                        )
+                    )
+
+
+                    # =========================================
+                    # GUARDAR TEMPORALMENTE
+                    # =========================================
+
+                    resultados_fisicos.append(
+                        {
+                            "Alumno":
+                                alumno,
+
+                            "Tipo de sesión":
+                                plan[
+                                    "Tipo"
+                                ],
+
+                            "Tipo físico":
+                                acondicionamiento_plan.get(
+                                    "Tipo",
+                                    ""
+                                ),
+
+                            "Momento":
+                                acondicionamiento_plan.get(
+                                    "Momento",
+                                    ""
+                                ),
+
+                            "Ejercicio":
+                                nombre_ejercicio_fisico,
+
+                            "Series planificadas":
+                                series_plan,
+
+                            "Series reales":
+                                int(
+                                    series_reales_fisico
+                                ),
+
+                            "Repeticiones planificadas":
+                                reps_plan,
+
+                            "Repeticiones reales":
+                                int(
+                                    repeticiones_reales_fisico
+                                ),
+
+                            "Carga externa planificada":
+                                carga_plan,
+
+                            "Carga externa real":
+                                float(
+                                    carga_real_fisico
+                                ),
+
+                            "RPE planificado":
+                                rpe_plan_fisico,
+
+                            "RPE real":
+                                float(
+                                    rpe_real_fisico
+                                ),
+
+                            "Compatibilidad":
+                                acondicionamiento_plan
+                                .get(
+                                    "Compatibilidad",
+                                    {}
+                                )
+                                .get(
+                                    "Nivel",
+                                    ""
+                                ),
+
+                            "Puntaje interferencia":
+                                acondicionamiento_plan
+                                .get(
+                                    "Compatibilidad",
+                                    {}
+                                )
+                                .get(
+                                    "Puntaje",
+                                    0
+                                )
+                        }
+                    )
+    # =====================================================
+    # DEBUG TEMPORAL 4B
+    # =====================================================
+
+    if resultados_fisicos:
+
+        with st.expander(
+            "Ver registro físico preparado",
+            expanded=False
+        ):
+
+            st.dataframe(
+                pd.DataFrame(
+                    resultados_fisicos
+                ),
+                use_container_width=True,
+                hide_index=True
+            )
     if st.button(
         "Guardar sesión",
         type="primary",
