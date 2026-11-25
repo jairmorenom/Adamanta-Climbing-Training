@@ -1987,25 +1987,6 @@ elif pagina == "Acondicionamiento físico":
 
     st.title("Acondicionamiento físico")
 
-    if not BASE_FISICO_CONECTADA:
-
-        st.error(
-            "No se pudo conectar con la base de "
-            "acondicionamiento físico."
-        )
-
-        st.code(ERROR_BASE_FISICO)
-        st.stop()
-
-    st.success(
-        "✅ Base de acondicionamiento físico conectada"
-    )
-
-    st.write(
-        "Ejercicios cargados:",
-        len(df_ejercicios_fisico)
-    )
-
     # =====================================================
     # ESTADO DE CONEXIÓN
     # =====================================================
@@ -2023,9 +2004,13 @@ elif pagina == "Acondicionamiento físico":
 
         st.stop()
 
-
     st.success(
         "✅ Base de acondicionamiento físico conectada"
+    )
+
+    st.write(
+        "Ejercicios cargados:",
+        len(df_ejercicios_fisico)
     )
 
 
