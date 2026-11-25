@@ -276,22 +276,14 @@ def calcular_carga_fisica(
     )
 
     if momento == "Antes de escalar":
-
         clave_momento = "Antes"
-
     else:
-
         clave_momento = "Después"
 
-
     if clave_momento == "Antes":
-
         factor_default = 1.0
-
     else:
-
         factor_default = 0.5
-
 
     factor = factores.get(
         clave_momento,
@@ -302,7 +294,6 @@ def calcular_carga_fisica(
         zona: 0.0
         for zona in ZONAS_FISICO
     }
-
 
     for ejercicio in ejercicios_fisicos:
 
@@ -316,7 +307,6 @@ def calcular_carga_fisica(
             ]
         )
 
-
         coincidencia = (
             df_ejercicios[
                 df_ejercicios[
@@ -329,14 +319,10 @@ def calcular_carga_fisica(
             ]
         )
 
-
         if coincidencia.empty:
-
             continue
 
-
         fila = coincidencia.iloc[0]
-
 
         tipo = limpiar_texto(
             fila.get(
@@ -345,12 +331,9 @@ def calcular_carga_fisica(
             )
         )
 
-
         # ACTIVACIÓN NO SUMA CARGA
         if tipo.lower() == "activación":
-
             continue
-
 
         for zona in ZONAS_FISICO:
 
@@ -362,12 +345,8 @@ def calcular_carga_fisica(
                 errors="coerce"
             )
 
-            if pd.isna(
-                calificacion
-            ):
-
+            if pd.isna(calificacion):
                 calificacion = 0
-
 
             aporte = (
                 float(calificacion)
@@ -377,14 +356,11 @@ def calcular_carga_fisica(
                 factor
             )
 
-
             carga_zonas[
                 zona
             ] += aporte
 
-
     resultados = {}
-
 
     for zona in ZONAS_FISICO:
 
@@ -396,7 +372,6 @@ def calcular_carga_fisica(
             zona
         )
 
-
         if reglas_zona is None:
 
             resultados[zona] = {
@@ -406,7 +381,6 @@ def calcular_carga_fisica(
             }
 
             continue
-
 
         if carga >= reglas_zona[
             "Alta"
@@ -420,7 +394,6 @@ def calcular_carga_fisica(
                 ]
             )
 
-
         elif carga >= reglas_zona[
             "Media"
         ]:
@@ -433,7 +406,6 @@ def calcular_carga_fisica(
                 ]
             )
 
-
         else:
 
             nivel = "BAJA"
@@ -442,52 +414,191 @@ def calcular_carga_fisica(
                 "Sin restricción específica."
             )
 
-
         resultados[zona] = {
             "Carga": float(carga),
             "Nivel": nivel,
             "Recomendación": recomendacion
         }
 
-
     return {
         "Factor": float(factor),
         "Resultados": resultados
     }
 
-    if 1 <= semana <= 13:
 
-        return (
-            1,
-            "Proyección en piedra"
+# =========================================================
+# PASO 3C-1 — REGLAS DE COMPATIBILIDAD
+# =========================================================
+
+DEMANDA_ESCALADA = {
+
+    "flash or trash": {
+        "Dedos": 2,
+        "Antebrazo / muñeca": 1,
+        "Tracción (espalda/bíceps)": 2,
+        "Empuje (pecho/tríceps)": 1,
+        "Hombro": 2,
+        "Core": 2,
+        "Piernas / cadera": 2
+    },
+
+    "simulación de competencia": {
+        "Dedos": 3,
+        "Antebrazo / muñeca": 2,
+        "Tracción (espalda/bíceps)": 3,
+        "Empuje (pecho/tríceps)": 2,
+        "Hombro": 3,
+        "Core": 3,
+        "Piernas / cadera": 3
+    },
+
+    "proyección": {
+        "Dedos": 3,
+        "Antebrazo / muñeca": 2,
+        "Tracción (espalda/bíceps)": 3,
+        "Empuje (pecho/tríceps)": 1,
+        "Hombro": 2,
+        "Core": 3,
+        "Piernas / cadera": 2
+    },
+
+    "corrección de técnica": {
+        "Dedos": 1,
+        "Antebrazo / muñeca": 1,
+        "Tracción (espalda/bíceps)": 1,
+        "Empuje (pecho/tríceps)": 1,
+        "Hombro": 1,
+        "Core": 1,
+        "Piernas / cadera": 1
+    },
+
+    "endurance técnico": {
+        "Dedos": 2,
+        "Antebrazo / muñeca": 3,
+        "Tracción (espalda/bíceps)": 2,
+        "Empuje (pecho/tríceps)": 1,
+        "Hombro": 1,
+        "Core": 2,
+        "Piernas / cadera": 1
+    },
+
+    "volumen/endurance técnico": {
+        "Dedos": 2,
+        "Antebrazo / muñeca": 3,
+        "Tracción (espalda/bíceps)": 2,
+        "Empuje (pecho/tríceps)": 1,
+        "Hombro": 1,
+        "Core": 2,
+        "Piernas / cadera": 1
+    },
+
+    "dinámicos": {
+        "Dedos": 2,
+        "Antebrazo / muñeca": 1,
+        "Tracción (espalda/bíceps)": 2,
+        "Empuje (pecho/tríceps)": 1,
+        "Hombro": 3,
+        "Core": 3,
+        "Piernas / cadera": 3
+    },
+
+    "coordinación": {
+        "Dedos": 1,
+        "Antebrazo / muñeca": 1,
+        "Tracción (espalda/bíceps)": 1,
+        "Empuje (pecho/tríceps)": 1,
+        "Hombro": 2,
+        "Core": 3,
+        "Piernas / cadera": 3
+    },
+
+    "habilidades técnicas": {
+        "Dedos": 1,
+        "Antebrazo / muñeca": 1,
+        "Tracción (espalda/bíceps)": 1,
+        "Empuje (pecho/tríceps)": 1,
+        "Hombro": 1,
+        "Core": 2,
+        "Piernas / cadera": 2
+    },
+
+    "movilidad aplicada": {
+        "Dedos": 0,
+        "Antebrazo / muñeca": 0,
+        "Tracción (espalda/bíceps)": 0,
+        "Empuje (pecho/tríceps)": 0,
+        "Hombro": 1,
+        "Core": 1,
+        "Piernas / cadera": 1
+    }
+}
+def obtener_demanda_escalada(
+    tipo_sesion
+):
+
+    tipo_normalizado = (
+        limpiar_texto(
+            tipo_sesion
         )
+        .lower()
+    )
 
-    elif 14 <= semana <= 26:
+    # Si encontramos exactamente el tipo
+    if tipo_normalizado in DEMANDA_ESCALADA:
 
-        return (
-            2,
-            "Volumen, fuerza e hipertrofia"
+        return DEMANDA_ESCALADA[
+            tipo_normalizado
+        ]
+
+
+    # ---------------------------------------------
+    # VALOR POR DEFECTO
+    # ---------------------------------------------
+    # Si aparece en la base un tipo nuevo que todavía
+    # no hemos clasificado, usamos demanda moderada.
+    # ---------------------------------------------
+
+    return {
+        "Dedos": 1,
+        "Antebrazo / muñeca": 1,
+        "Tracción (espalda/bíceps)": 1,
+        "Empuje (pecho/tríceps)": 1,
+        "Hombro": 1,
+        "Core": 1,
+        "Piernas / cadera": 1
+    }
+
+def obtener_demanda_escalada(
+    tipo_sesion
+):
+
+    tipo_normalizado = (
+        limpiar_texto(
+            tipo_sesion
         )
+        .lower()
+    )
 
-    elif 27 <= semana <= 39:
+    if tipo_normalizado in DEMANDA_ESCALADA:
 
-        return (
-            3,
-            "Técnica avanzada + transición a competencia"
-        )
+        return DEMANDA_ESCALADA[
+            tipo_normalizado
+        ]
 
-    else:
-
-        return (
-            4,
-            "Competencia + transición a roca"
-        )
+    return {
+        "Dedos": 1,
+        "Antebrazo / muñeca": 1,
+        "Tracción (espalda/bíceps)": 1,
+        "Empuje (pecho/tríceps)": 1,
+        "Hombro": 1,
+        "Core": 1,
+        "Piernas / cadera": 1
+    }
 
 
 # =========================================================
 # LECTURA PÚBLICA DEL GOOGLE SHEET
 # =========================================================
-
 @st.cache_data(ttl=60)
 def leer_hoja(
     nombre_hoja,
