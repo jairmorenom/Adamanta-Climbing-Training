@@ -1930,10 +1930,355 @@ elif pagina == "Planear sesión":
             f"{rpe_medio:.1f}"
         )
 
-        col3.metric(
+                col3.metric(
             "Carga planificada",
             f"{carga_planificada:.0f}"
         )
+
+
+        # =====================================================
+        # ACONDICIONAMIENTO FÍSICO
+        # =====================================================
+
+        st.divider()
+
+        st.subheader(
+            "Acondicionamiento físico"
+        )
+
+        agregar_fisico = st.toggle(
+            "Agregar acondicionamiento físico a esta sesión",
+            value=False,
+            key=f"agregar_fisico_{semana}_{sesion}"
+        )
+
+
+        # Estructura por defecto
+        acondicionamiento = {
+            "Activo": False,
+            "Tipo": None,
+            "Momento": None,
+            "Ejercicios": []
+        }
+
+
+        if agregar_fisico:
+
+            st.caption(
+                "El acondicionamiento formará parte "
+                "de esta misma sesión de escalada."
+            )
+
+
+            # =================================================
+            # TIPO DE ACONDICIONAMIENTO
+            # =================================================
+
+            tipos_fisico = sorted(
+                df_ejercicios_fisico[
+                    "Tipo"
+                ]
+                .dropna()
+                .astype(str)
+                .str.strip()
+                .unique()
+                .tolist()
+            )
+
+
+            tipo_fisico = st.selectbox(
+                "Tipo de acondicionamiento",
+                tipos_fisico,
+                index=None,
+                placeholder="Selecciona el tipo...",
+                key=f"tipo_fisico_{semana}_{sesion}"
+            )
+
+
+            # =================================================
+            # MOMENTO
+            # =================================================
+
+            momento_fisico = st.radio(
+                "Momento",
+                [
+                    "Antes de escalar",
+                    "Después de escalar"
+                ],
+                horizontal=True,
+                key=f"momento_fisico_{semana}_{sesion}"
+            )
+
+
+            # =================================================
+            # EJERCICIOS
+            # =================================================
+
+            if tipo_fisico is not None:
+
+                df_tipo_fisico = (
+                    df_ejercicios_fisico[
+                        df_ejercicios_fisico[
+                            "Tipo"
+                        ]
+                        .astype(str)
+                        .str.strip()
+                        ==
+                        tipo_fisico
+                    ]
+                    .copy()
+                )
+
+
+                opciones_ejercicios = sorted(
+                    df_tipo_fisico[
+                        "Ejercicio"
+                    ]
+                    .dropna()
+                    .astype(str)
+                    .str.strip()
+                    .unique()
+                    .tolist()
+                )
+
+
+                numero_ejercicios_fisico = st.number_input(
+                    "Número de ejercicios",
+                    min_value=1,
+                    max_value=10,
+                    value=3,
+                    step=1,
+                    key=f"numero_fisico_{semana}_{sesion}"
+                )
+
+
+                ejercicios_fisicos = []
+
+                ejercicios_utilizados = set()
+
+
+                # =================================================
+                # CREAR EJERCICIOS
+                # =================================================
+
+                for i in range(
+                    int(numero_ejercicios_fisico)
+                ):
+
+                    with st.expander(
+                        f"Ejercicio {i + 1}",
+                        expanded=True
+                    ):
+
+                        ejercicio_fisico = st.selectbox(
+                            "Ejercicio",
+                            opciones_ejercicios,
+                            index=None,
+                            placeholder="Selecciona ejercicio...",
+                            key=(
+                                f"ejercicio_fisico_"
+                                f"{semana}_{sesion}_{i}"
+                            )
+                        )
+
+
+                        if ejercicio_fisico is not None:
+
+                            if ejercicio_fisico in ejercicios_utilizados:
+
+                                st.warning(
+                                    "Este ejercicio ya fue seleccionado."
+                                )
+
+                                continue
+
+
+                            ejercicios_utilizados.add(
+                                ejercicio_fisico
+                            )
+
+
+                            fila_ejercicio = (
+                                df_tipo_fisico[
+                                    df_tipo_fisico[
+                                        "Ejercicio"
+                                    ]
+                                    .astype(str)
+                                    .str.strip()
+                                    ==
+                                    ejercicio_fisico
+                                ]
+                                .iloc[0]
+                            )
+
+
+                            equipo = limpiar_texto(
+                                fila_ejercicio.get(
+                                    "Equipo",
+                                    ""
+                                )
+                            )
+
+                            zona_principal = limpiar_texto(
+                                fila_ejercicio.get(
+                                    "Zona principal",
+                                    ""
+                                )
+                            )
+
+
+                            col_info1, col_info2 = (
+                                st.columns(2)
+                            )
+
+                            col_info1.caption(
+                                f"Equipo: "
+                                f"{equipo if equipo else '—'}"
+                            )
+
+                            col_info2.caption(
+                                f"Zona principal: "
+                                f"{zona_principal if zona_principal else '—'}"
+                            )
+
+
+                            # =====================================
+                            # PRESCRIPCIÓN
+                            # =====================================
+
+                            col1, col2 = st.columns(2)
+
+                            series = col1.number_input(
+                                "Series",
+                                min_value=1,
+                                max_value=20,
+                                value=3,
+                                step=1,
+                                key=(
+                                    f"series_fisico_"
+                                    f"{semana}_{sesion}_{i}"
+                                )
+                            )
+
+                            repeticiones = col2.number_input(
+                                "Repeticiones",
+                                min_value=1,
+                                max_value=100,
+                                value=8,
+                                step=1,
+                                key=(
+                                    f"reps_fisico_"
+                                    f"{semana}_{sesion}_{i}"
+                                )
+                            )
+
+
+                            col3_fisico, col4_fisico = (
+                                st.columns(2)
+                            )
+
+                            carga_externa = (
+                                col3_fisico.number_input(
+                                    "Carga externa (kg)",
+                                    min_value=0.0,
+                                    value=0.0,
+                                    step=0.5,
+                                    key=(
+                                        f"carga_fisico_"
+                                        f"{semana}_{sesion}_{i}"
+                                    )
+                                )
+                            )
+
+                            rpe_objetivo = (
+                                col4_fisico.number_input(
+                                    "RPE objetivo",
+                                    min_value=1.0,
+                                    max_value=10.0,
+                                    value=7.0,
+                                    step=0.5,
+                                    key=(
+                                        f"rpe_fisico_"
+                                        f"{semana}_{sesion}_{i}"
+                                    )
+                                )
+                            )
+
+
+                            ejercicios_fisicos.append(
+                                {
+                                    "Ejercicio":
+                                        ejercicio_fisico,
+
+                                    "Tipo":
+                                        tipo_fisico,
+
+                                    "Equipo":
+                                        equipo,
+
+                                    "Zona principal":
+                                        zona_principal,
+
+                                    "Series":
+                                        int(series),
+
+                                    "Repeticiones":
+                                        int(repeticiones),
+
+                                    "Carga externa":
+                                        float(carga_externa),
+
+                                    "RPE objetivo":
+                                        float(rpe_objetivo)
+                                }
+                            )
+
+
+                acondicionamiento = {
+                    "Activo": True,
+                    "Tipo": tipo_fisico,
+                    "Momento": momento_fisico,
+                    "Ejercicios": ejercicios_fisicos
+                }
+
+
+                # =================================================
+                # RESUMEN
+                # =================================================
+
+                if ejercicios_fisicos:
+
+                    st.markdown(
+                        "### Resumen del acondicionamiento"
+                    )
+
+                    st.write(
+                        f"**Tipo:** {tipo_fisico}"
+                    )
+
+                    st.write(
+                        f"**Momento:** {momento_fisico}"
+                    )
+
+
+                    for numero, ejercicio in enumerate(
+                        ejercicios_fisicos,
+                        start=1
+                    ):
+
+                        st.write(
+                            f"**{numero}. "
+                            f"{ejercicio['Ejercicio']}** — "
+                            f"{ejercicio['Series']} × "
+                            f"{ejercicio['Repeticiones']} · "
+                            f"{ejercicio['Carga externa']:.1f} kg · "
+                            f"RPE {ejercicio['RPE objetivo']:.1f}"
+                        )
+
+
+        # =====================================================
+        # GUARDAR SESIÓN COMPLETA
+        # =====================================================
 
         if (
             len(seleccion)
@@ -1973,13 +2318,15 @@ elif pagina == "Planear sesión":
                 "Carga":
                     float(
                         carga_planificada
-                    )
+                    ),
+
+                "Acondicionamiento":
+                    acondicionamiento
             }
 
             st.success(
                 "Sesión lista para registrar."
             )
-
 # =========================================================
 # ACONDICIONAMIENTO FÍSICO
 # =========================================================
