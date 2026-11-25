@@ -2372,6 +2372,7 @@ elif pagina == "Planear sesión":
 
                         if ejercicio_fisico is not None:
 
+                            # Evitar duplicados
                             if ejercicio_fisico in ejercicios_utilizados:
 
                                 st.warning(
@@ -2385,6 +2386,10 @@ elif pagina == "Planear sesión":
                                 ejercicio_fisico
                             )
 
+
+                            # =====================================
+                            # DATOS DEL EJERCICIO
+                            # =====================================
 
                             fila_ejercicio = (
                                 df_tipo_fisico[
@@ -2493,20 +2498,37 @@ elif pagina == "Planear sesión":
                             )
 
 
-                    ejercicios_fisicos.append(
-                        {
-                            "Ejercicio": ejercicio_fisico,
-                            "Tipo": tipo_fisico,
-                            "Equipo": equipo,
-                            "Zona principal": zona_principal,
-                            "Series": int(series),
-                            "Repeticiones": int(repeticiones),
-                            "Carga externa": float(carga_externa),
-                            "RPE objetivo": float(rpe_objetivo)
-                        }
-                    )
+                            # =====================================
+                            # GUARDAR EJERCICIO
+                            # =====================================
 
+                            ejercicios_fisicos.append(
+                                {
+                                    "Ejercicio":
+                                        ejercicio_fisico,
 
+                                    "Tipo":
+                                        tipo_fisico,
+
+                                    "Equipo":
+                                        equipo,
+
+                                    "Zona principal":
+                                        zona_principal,
+
+                                    "Series":
+                                        int(series),
+
+                                    "Repeticiones":
+                                        int(repeticiones),
+
+                                    "Carga externa":
+                                        float(carga_externa),
+
+                                    "RPE objetivo":
+                                        float(rpe_objetivo)
+                                }
+                            )
                 # =================================================
                 # PASO 3A — CALCULAR CARGA FÍSICA
                 # =================================================
