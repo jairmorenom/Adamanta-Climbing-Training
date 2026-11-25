@@ -142,7 +142,11 @@ def obtener_bloque(semana):
 # =========================================================
 
 @st.cache_data(ttl=60)
-def leer_hoja(nombre_hoja):
+def leer_hoja(
+    nombre_hoja,
+    spreadsheet_id=SPREADSHEET_ID,
+    header=0
+):
 
     nombre_codificado = urllib.parse.quote(
         nombre_hoja
@@ -150,20 +154,24 @@ def leer_hoja(nombre_hoja):
 
     url = (
         "https://docs.google.com/spreadsheets/d/"
-        f"{SPREADSHEET_ID}/gviz/tq?"
+        f"{spreadsheet_id}/gviz/tq?"
         f"tqx=out:csv&sheet={nombre_codificado}"
     )
 
-    df = pd.read_csv(url)
-
-    df.columns = (
-        df.columns
-        .astype(str)
-        .str.strip()
+    df = pd.read_csv(
+        url,
+        header=header
     )
 
-    return df
+    if header is not None:
 
+        df.columns = (
+            df.columns
+            .astype(str)
+            .str.strip()
+        )
+
+    return df
 
 # =========================================================
 # ACCESS TOKEN GOOGLE
@@ -1279,7 +1287,35 @@ def actualizar_seguimiento_bloque(
                 nueva_fila
             )
 
+# =========================================================
+# CARGAR BASE DE ACONDICIONAMIENTO FÍSICO
+# =========================================================
 
+try:
+
+    df_ejercicios_fisico = leer_hoja(
+        HOJAS_FISICO["ejercicios"],
+        SPREADSHEET_ID_FISICO
+    )
+
+    df_reglas_fisico = leer_hoja(
+        HOJAS_FISICO["reglas"],
+        SPREADSHEET_ID_FISICO,
+        header=None
+    )
+
+    BASE_FISICO_CONECTADA = True
+
+
+except Exception as e:
+
+    df_ejercicios_fisico = pd.DataFrame()
+    df_reglas_fisico = pd.DataFrame()
+
+    BASE_FISICO_CONECTADA = False
+
+    ERROR_BASE_FISICO = str(e)
+    
 # =========================================================
 # CARGAR DATOS PRINCIPALES
 # =========================================================
@@ -1943,7 +1979,207 @@ elif pagina == "Planear sesión":
                 "Sesión lista para registrar."
             )
 
+# =========================================================
+# ACONDICIONAMIENTO FÍSICO
+# =========================================================
 
+elif pagina == "Acondicionamiento físico":
+
+    st.title(
+        "Acondicionamiento físico"
+    )
+
+    st.caption(
+        "Base de ejercicios y planificación física "
+        "integrada con las sesiones de escalada."
+    )
+
+
+    # =====================================================
+    # ESTADO DE CONEXIÓN
+    # =====================================================
+
+    if not BASE_FISICO_CONECTADA:
+
+        st.error(
+            "No se pudo conectar con la base de "
+            "acondicionamiento físico."
+        )
+
+        st.code(
+            ERROR_BASE_FISICO
+        )
+
+        st.stop()
+
+
+    st.success(
+        "✅ Base de acondicionamiento físico conectada"
+    )
+
+
+    # =====================================================
+    # INFORMACIÓN GENERAL
+    # =====================================================
+
+    total_ejercicios = len(
+        df_ejercicios_fisico
+    )
+
+    tipos_ejercicio = (
+        df_ejercicios_fisico[
+            "Tipo"
+        ]
+        .dropna()
+        .nunique()
+    )
+
+    zonas_principales = (
+        df_ejercicios_fisico[
+            "Zona principal"
+        ]
+        .dropna()
+        .nunique()
+    )
+
+
+    col1, col2, col3 = st.columns(3)
+
+
+    col1.metric(
+        "Ejercicios",
+        total_ejercicios
+    )
+
+
+    col2.metric(
+        "Tipos",
+        tipos_ejercicio
+    )
+
+
+    col3.metric(
+        "Zonas principales",
+        zonas_principales
+    )
+
+
+    # =====================================================
+    # EXPLORADOR DE EJERCICIOS
+    # =====================================================
+
+    st.divider()
+
+    st.subheader(
+        "Base de ejercicios"
+    )
+
+
+    tipo_seleccionado = st.selectbox(
+        "Tipo de ejercicio",
+        sorted(
+            df_ejercicios_fisico[
+                "Tipo"
+            ]
+            .dropna()
+            .unique()
+            .tolist()
+        ),
+        index=None,
+        placeholder="Todos los tipos"
+    )
+
+
+    if tipo_seleccionado is None:
+
+        ejercicios_mostrar = (
+            df_ejercicios_fisico.copy()
+        )
+
+    else:
+
+        ejercicios_mostrar = (
+            df_ejercicios_fisico[
+                df_ejercicios_fisico[
+                    "Tipo"
+                ]
+                ==
+                tipo_seleccionado
+            ]
+            .copy()
+        )
+
+
+    # =====================================================
+    # BUSCADOR
+    # =====================================================
+
+    buscar_ejercicio = st.text_input(
+        "Buscar ejercicio",
+        placeholder=(
+            "Ej. dominadas, press, core..."
+        )
+    )
+
+
+    if buscar_ejercicio:
+
+        ejercicios_mostrar = (
+            ejercicios_mostrar[
+                ejercicios_mostrar[
+                    "Ejercicio"
+                ]
+                .astype(str)
+                .str.contains(
+                    buscar_ejercicio,
+                    case=False,
+                    na=False
+                )
+            ]
+        )
+
+
+    # =====================================================
+    # TABLA
+    # =====================================================
+
+    columnas_mostrar = [
+        "ID",
+        "Ejercicio",
+        "Tipo",
+        "Equipo",
+        "Zona principal",
+        "Dedos",
+        "Antebrazo / muñeca",
+        "Tracción (espalda/bíceps)",
+        "Empuje (pecho/tríceps)",
+        "Hombro",
+        "Core",
+        "Piernas / cadera"
+    ]
+
+
+    columnas_disponibles = [
+        columna
+        for columna in columnas_mostrar
+        if columna
+        in ejercicios_mostrar.columns
+    ]
+
+
+    st.dataframe(
+        ejercicios_mostrar[
+            columnas_disponibles
+        ],
+        use_container_width=True,
+        hide_index=True
+    )
+
+
+    st.caption(
+        f"Mostrando {len(ejercicios_mostrar)} "
+        f"de {total_ejercicios} ejercicios."
+    )
 # =========================================================
 # REGISTRAR SESIÓN
 # =========================================================
