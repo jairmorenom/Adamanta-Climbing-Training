@@ -4722,24 +4722,7 @@ elif pagina == "Registrar sesión":
                                 )
                         }
                     )
-    # =====================================================
-    # DEBUG TEMPORAL 4B
-    # =====================================================
 
-    if resultados_fisicos:
-
-        with st.expander(
-            "Ver registro físico preparado",
-            expanded=False
-        ):
-
-            st.dataframe(
-                pd.DataFrame(
-                    resultados_fisicos
-                ),
-                use_container_width=True,
-                hide_index=True
-            )
     if st.button(
         "Guardar sesión",
         type="primary",
@@ -4747,116 +4730,348 @@ elif pagina == "Registrar sesión":
     ):
 
         if not resultados:
+
             st.warning(
                 "Selecciona al menos un alumno."
             )
 
         else:
+
+            # =================================================
+            # CONTADORES ESCALADA
+            # =================================================
+
             guardados = 0
             actualizados = 0
+
+
+            # =================================================
+            # CONTADORES FÍSICO
+            # =================================================
+
+            guardados_fisicos = 0
+            actualizados_fisicos = 0
+
+
             errores = []
+
 
             with st.spinner(
                 "Guardando sesión..."
             ):
+
+                # =================================================
+                # GUARDAR ESCALADA
+                # =================================================
+
                 for resultado in resultados:
 
                     try:
-                        accion = (
-                            guardar_historial(
-                                plan[
-                                    "Semana"
-                                ],
-                                plan[
-                                    "Sesión"
-                                ],
-                                resultado[
-                                    "Alumno"
-                                ],
-                                plan[
-                                    "Tipo"
-                                ],
-                                resultado[
-                                    "Volumen planificado"
-                                ],
-                                resultado[
-                                    "Volumen real"
-                                ],
-                                resultado[
-                                    "RPE planificado"
-                                ],
-                                resultado[
-                                    "RPE real"
-                                ],
-                                resultado[
-                                    "Carga planificada"
-                                ],
-                                resultado[
-                                    "Carga real"
-                                ],
-                            )
+
+                        accion = guardar_historial(
+
+                            plan[
+                                "Semana"
+                            ],
+
+                            plan[
+                                "Sesión"
+                            ],
+
+                            resultado[
+                                "Alumno"
+                            ],
+
+                            plan[
+                                "Tipo"
+                            ],
+
+                            resultado[
+                                "Volumen planificado"
+                            ],
+
+                            resultado[
+                                "Volumen real"
+                            ],
+
+                            resultado[
+                                "RPE planificado"
+                            ],
+
+                            resultado[
+                                "RPE real"
+                            ],
+
+                            resultado[
+                                "Carga planificada"
+                            ],
+
+                            resultado[
+                                "Carga real"
+                            ]
                         )
 
+
                         if accion == "creado":
+
                             guardados += 1
 
                         else:
+
                             actualizados += 1
 
+
                     except Exception as error:
+
                         errores.append(
+                            f"Escalada · "
                             f"{resultado['Alumno']}: "
                             f"{str(error)}"
                         )
 
-                if not errores:
+
+                # =================================================
+                # ACTUALIZAR SEGUIMIENTO DE ESCALADA
+                # =================================================
+
+                try:
+
+                    actualizar_seguimiento_bloque(
+                        plan[
+                            "Bloque"
+                        ]
+                    )
+
+                except Exception as error:
+
+                    errores.append(
+                        "Seguimiento por bloque: "
+                        f"{str(error)}"
+                    )
+
+
+                # =================================================
+                # PASO 4C — GUARDAR HISTORIAL FÍSICO
+                # =================================================
+
+                for registro_fisico in resultados_fisicos:
 
                     try:
-                        actualizar_seguimiento_bloque(
-                            plan[
-                                "Bloque"
+
+                        # =========================================
+                        # CALCULAR CARGA REAL POR ZONA
+                        # DE ESTE EJERCICIO
+                        # =========================================
+
+                        ejercicio_para_carga = {
+                            "Ejercicio":
+                                registro_fisico[
+                                    "Ejercicio"
+                                ],
+
+                            "Series":
+                                registro_fisico[
+                                    "Series reales"
+                                ]
+                        }
+
+
+                        resultado_carga_ejercicio = (
+                            calcular_carga_fisica(
+                                [
+                                    ejercicio_para_carga
+                                ],
+                                registro_fisico[
+                                    "Momento"
+                                ],
+                                df_ejercicios_fisico,
+                                df_reglas_fisico
+                            )
+                        )
+
+
+                        carga_zonas_ejercicio = (
+                            resultado_carga_ejercicio[
+                                "Resultados"
                             ]
                         )
 
+
+                        # =========================================
+                        # GUARDAR EN HISTORIAL FÍSICO
+                        # =========================================
+
+                        accion_fisica = (
+                            guardar_historial_fisico(
+
+                                plan[
+                                    "Semana"
+                                ],
+
+                                plan[
+                                    "Sesión"
+                                ],
+
+                                registro_fisico[
+                                    "Alumno"
+                                ],
+
+                                registro_fisico[
+                                    "Tipo de sesión"
+                                ],
+
+                                registro_fisico[
+                                    "Tipo físico"
+                                ],
+
+                                registro_fisico[
+                                    "Momento"
+                                ],
+
+                                registro_fisico[
+                                    "Ejercicio"
+                                ],
+
+                                registro_fisico[
+                                    "Series planificadas"
+                                ],
+
+                                registro_fisico[
+                                    "Series reales"
+                                ],
+
+                                registro_fisico[
+                                    "Repeticiones planificadas"
+                                ],
+
+                                registro_fisico[
+                                    "Repeticiones reales"
+                                ],
+
+                                registro_fisico[
+                                    "Carga externa planificada"
+                                ],
+
+                                registro_fisico[
+                                    "Carga externa real"
+                                ],
+
+                                registro_fisico[
+                                    "RPE planificado"
+                                ],
+
+                                registro_fisico[
+                                    "RPE real"
+                                ],
+
+                                carga_zonas_ejercicio,
+
+                                registro_fisico[
+                                    "Compatibilidad"
+                                ],
+
+                                registro_fisico[
+                                    "Puntaje interferencia"
+                                ]
+                            )
+                        )
+
+
+                        if accion_fisica == "creado":
+
+                            guardados_fisicos += 1
+
+                        else:
+
+                            actualizados_fisicos += 1
+
+
                     except Exception as error:
+
                         errores.append(
-                            "Seguimiento por bloque: "
+                            f"Físico · "
+                            f"{registro_fisico['Alumno']} · "
+                            f"{registro_fisico['Ejercicio']}: "
                             f"{str(error)}"
                         )
 
+
+            # =================================================
+            # RESULTADOS ESCALADA
+            # =================================================
+
             if guardados:
+
                 st.success(
-                    f"✅ {guardados} registro(s) nuevos guardados."
+                    f"✅ {guardados} registro(s) "
+                    "de escalada guardados."
                 )
+
 
             if actualizados:
+
                 st.info(
-                    f"🔄 {actualizados} registro(s) actualizados."
+                    f"🔄 {actualizados} registro(s) "
+                    "de escalada actualizados."
                 )
 
+
+            # =================================================
+            # RESULTADOS FÍSICO
+            # =================================================
+
+            if guardados_fisicos:
+
+                st.success(
+                    f"✅ {guardados_fisicos} registro(s) "
+                    "de acondicionamiento físico guardados."
+                )
+
+
+            if actualizados_fisicos:
+
+                st.info(
+                    f"🔄 {actualizados_fisicos} registro(s) "
+                    "de acondicionamiento físico actualizados."
+                )
+
+
+            # =================================================
+            # FINAL
+            # =================================================
+
             if not errores:
+
                 st.success(
                     "✅ Historial semanal actualizado."
+                )
+
+                st.success(
+                    "✅ Historial físico actualizado."
                 )
 
                 st.success(
                     "✅ Seguimiento por bloque actualizado."
                 )
 
+
                 st.cache_data.clear()
 
                 st.balloons()
 
+
             else:
+
                 st.error(
                     "Hubo problemas al guardar:"
                 )
 
+
                 for error in errores:
+
                     st.write(
                         f"• {error}"
                     )
-
 
 # =========================================================
 # SEGUIMIENTO
