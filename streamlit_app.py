@@ -1930,7 +1930,7 @@ elif pagina == "Planear sesión":
             f"{rpe_medio:.1f}"
         )
 
-                col3.metric(
+        col3.metric(
             "Carga planificada",
             f"{carga_planificada:.0f}"
         )
