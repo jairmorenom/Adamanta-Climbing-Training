@@ -78,6 +78,7 @@ HOJAS_FISICO = {
     "reglas": "Reglas",
     "sesion": "Sesión",
     "como_usar": "Cómo usar",
+    "historial": "Historial físico",
 }
 
 
@@ -807,8 +808,454 @@ def sheets_append(
     respuesta.raise_for_status()
 
     return respuesta.json()
+# =========================================================
+# GOOGLE SHEETS API — ACONDICIONAMIENTO FÍSICO
+# =========================================================
+
+def sheets_get_fisico(rango):
+
+    rango_url = urllib.parse.quote(
+        rango,
+        safe=""
+    )
+
+    url = (
+        "https://sheets.googleapis.com/v4/"
+        f"spreadsheets/{SPREADSHEET_ID_FISICO}/"
+        f"values/{rango_url}"
+    )
+
+    respuesta = requests.get(
+        url,
+        headers=api_headers(),
+        timeout=20
+    )
+
+    if respuesta.status_code == 401:
+
+        st.error(
+            "La sesión de Google expiró."
+        )
+
+        st.info(
+            "Cierra sesión y vuelve a entrar."
+        )
+
+        st.stop()
 
 
+    if respuesta.status_code == 403:
+
+        st.error(
+            "Tu cuenta no tiene permiso para "
+            "modificar la base de acondicionamiento físico."
+        )
+
+        st.stop()
+
+
+    respuesta.raise_for_status()
+
+
+    return respuesta.json().get(
+        "values",
+        []
+    )
+
+
+def sheets_update_fisico(
+    rango,
+    valores
+):
+
+    rango_url = urllib.parse.quote(
+        rango,
+        safe=""
+    )
+
+    url = (
+        "https://sheets.googleapis.com/v4/"
+        f"spreadsheets/{SPREADSHEET_ID_FISICO}/"
+        f"values/{rango_url}"
+        "?valueInputOption=USER_ENTERED"
+    )
+
+    respuesta = requests.put(
+        url,
+        headers=api_headers(),
+        json={
+            "range": rango,
+            "majorDimension": "ROWS",
+            "values": valores
+        },
+        timeout=20
+    )
+
+    respuesta.raise_for_status()
+
+    return respuesta.json()
+
+
+def sheets_append_fisico(
+    rango,
+    valores
+):
+
+    rango_url = urllib.parse.quote(
+        rango,
+        safe=""
+    )
+
+    url = (
+        "https://sheets.googleapis.com/v4/"
+        f"spreadsheets/{SPREADSHEET_ID_FISICO}/"
+        f"values/{rango_url}:append"
+        "?valueInputOption=USER_ENTERED"
+        "&insertDataOption=INSERT_ROWS"
+    )
+
+    respuesta = requests.post(
+        url,
+        headers=api_headers(),
+        json={
+            "majorDimension": "ROWS",
+            "values": valores
+        },
+        timeout=20
+    )
+
+    respuesta.raise_for_status()
+
+    return respuesta.json()    
+
+# =========================================================
+# GUARDAR HISTORIAL FÍSICO
+# =========================================================
+
+def guardar_historial_fisico(
+    semana,
+    sesion,
+    alumno,
+    tipo_sesion,
+    tipo_fisico,
+    momento,
+    ejercicio,
+    series_planificadas,
+    series_reales,
+    repeticiones_planificadas,
+    repeticiones_reales,
+    carga_externa_planificada,
+    carga_externa_real,
+    rpe_planificado,
+    rpe_real,
+    carga_zonas,
+    compatibilidad,
+    puntaje_interferencia
+):
+
+    # =====================================================
+    # EXTRAER CARGA DE CADA ZONA
+    # =====================================================
+
+    def obtener_carga_zona(
+        zona
+    ):
+
+        valor = carga_zonas.get(
+            zona,
+            0
+        )
+
+        # Permite recibir:
+        # {"Dedos": 4}
+        #
+        # o:
+        # {"Dedos": {"Carga": 4, "Nivel": "MEDIA"}}
+
+        if isinstance(
+            valor,
+            dict
+        ):
+
+            valor = valor.get(
+                "Carga",
+                0
+            )
+
+
+        valor = pd.to_numeric(
+            valor,
+            errors="coerce"
+        )
+
+
+        if pd.isna(
+            valor
+        ):
+
+            return 0.0
+
+
+        return float(
+            valor
+        )
+
+
+    # =====================================================
+    # CREAR FILA
+    # =====================================================
+
+    nueva_fila = [
+
+        int(
+            semana
+        ),
+
+        int(
+            sesion
+        ),
+
+        str(
+            alumno
+        ),
+
+        str(
+            tipo_sesion
+        ),
+
+        str(
+            tipo_fisico
+        ),
+
+        str(
+            momento
+        ),
+
+        str(
+            ejercicio
+        ),
+
+        int(
+            series_planificadas
+        ),
+
+        int(
+            series_reales
+        ),
+
+        int(
+            repeticiones_planificadas
+        ),
+
+        int(
+            repeticiones_reales
+        ),
+
+        float(
+            carga_externa_planificada
+        ),
+
+        float(
+            carga_externa_real
+        ),
+
+        float(
+            rpe_planificado
+        ),
+
+        float(
+            rpe_real
+        ),
+
+        obtener_carga_zona(
+            "Dedos"
+        ),
+
+        obtener_carga_zona(
+            "Antebrazo / muñeca"
+        ),
+
+        obtener_carga_zona(
+            "Tracción (espalda/bíceps)"
+        ),
+
+        obtener_carga_zona(
+            "Empuje (pecho/tríceps)"
+        ),
+
+        obtener_carga_zona(
+            "Hombro"
+        ),
+
+        obtener_carga_zona(
+            "Core"
+        ),
+
+        obtener_carga_zona(
+            "Piernas / cadera"
+        ),
+
+        str(
+            compatibilidad
+        ),
+
+        float(
+            puntaje_interferencia
+        )
+    ]
+
+
+    # =====================================================
+    # LEER HISTORIAL EXISTENTE
+    # =====================================================
+
+    nombre_hoja = (
+        HOJAS_FISICO[
+            "historial"
+        ]
+    )
+
+
+    valores = sheets_get_fisico(
+        f"'{nombre_hoja}'!A:X"
+    )
+
+
+    fila_encontrada = None
+
+
+    # =====================================================
+    # BUSCAR SI YA EXISTE
+    # Semana + Sesión + Alumno + Ejercicio
+    # =====================================================
+
+    for numero_fila, fila in enumerate(
+        valores[1:],
+        start=2
+    ):
+
+        if len(
+            fila
+        ) < 7:
+
+            continue
+
+
+        try:
+
+            semana_existente = int(
+                float(
+                    fila[0]
+                )
+            )
+
+            sesion_existente = int(
+                float(
+                    fila[1]
+                )
+            )
+
+        except (
+            ValueError,
+            TypeError
+        ):
+
+            continue
+
+
+        alumno_existente = (
+            str(
+                fila[2]
+            )
+            .strip()
+            .lower()
+        )
+
+
+        ejercicio_existente = (
+            str(
+                fila[6]
+            )
+            .strip()
+            .lower()
+        )
+
+
+        if (
+            semana_existente
+            ==
+            int(
+                semana
+            )
+
+            and
+
+            sesion_existente
+            ==
+            int(
+                sesion
+            )
+
+            and
+
+            alumno_existente
+            ==
+            str(
+                alumno
+            )
+            .strip()
+            .lower()
+
+            and
+
+            ejercicio_existente
+            ==
+            str(
+                ejercicio
+            )
+            .strip()
+            .lower()
+        ):
+
+            fila_encontrada = (
+                numero_fila
+            )
+
+            break
+
+
+    # =====================================================
+    # ACTUALIZAR SI YA EXISTE
+    # =====================================================
+
+    if fila_encontrada:
+
+        sheets_update_fisico(
+            (
+                f"'{nombre_hoja}'!"
+                f"A{fila_encontrada}:X{fila_encontrada}"
+            ),
+            [
+                nueva_fila
+            ]
+        )
+
+        return "actualizado"
+
+
+    # =====================================================
+    # CREAR SI NO EXISTE
+    # =====================================================
+
+    sheets_append_fisico(
+        f"'{nombre_hoja}'!A:X",
+        [
+            nueva_fila
+        ]
+    )
+
+
+    return "creado"
 # =========================================================
 # GUARDAR HISTORIAL SEMANAL
 # =========================================================
