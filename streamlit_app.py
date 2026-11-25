@@ -107,19 +107,6 @@ def limpiar_texto(valor):
 
 
 def obtener_bloque(semana):
-    # =========================================================
-# FUNCIONES GENERALES
-# =========================================================
-
-def limpiar_texto(valor):
-
-    if pd.isna(valor):
-        return ""
-
-    return str(valor).strip()
-
-
-def obtener_bloque(semana):
 
     if 1 <= semana <= 13:
 
@@ -148,8 +135,6 @@ def obtener_bloque(semana):
             4,
             "Competencia + transición a roca"
         )
-
-
 # =========================================================
 # MOTOR DE CARGA FÍSICA
 # =========================================================
