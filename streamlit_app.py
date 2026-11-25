@@ -4286,6 +4286,258 @@ elif pagina == "Acondicionamiento físico":
         f"{len(ejercicios_mostrar)} "
         f"de {total_ejercicios} ejercicios."
     )
+        # =====================================================
+    # PASO 4D — VERIFICAR HISTORIAL FÍSICO
+    # =====================================================
+
+    st.divider()
+
+    st.subheader(
+        "Verificación del historial físico"
+    )
+
+
+    try:
+
+        df_historial_fisico = leer_hoja(
+            HOJAS_FISICO[
+                "historial"
+            ],
+            SPREADSHEET_ID_FISICO
+        )
+
+
+        # =================================================
+        # COLUMNAS ESPERADAS
+        # =================================================
+
+        columnas_historial_fisico = [
+            "Semana",
+            "Sesión",
+            "Alumno",
+            "Tipo de sesión",
+            "Tipo físico",
+            "Momento",
+            "Ejercicio",
+            "Series planificadas",
+            "Series reales",
+            "Repeticiones planificadas",
+            "Repeticiones reales",
+            "Carga externa planificada",
+            "Carga externa real",
+            "RPE planificado",
+            "RPE real",
+            "Dedos",
+            "Antebrazo / muñeca",
+            "Tracción (espalda/bíceps)",
+            "Empuje (pecho/tríceps)",
+            "Hombro",
+            "Core",
+            "Piernas / cadera",
+            "Compatibilidad",
+            "Puntaje interferencia"
+        ]
+
+
+        columnas_faltantes = [
+            columna
+            for columna
+            in columnas_historial_fisico
+            if columna
+            not in df_historial_fisico.columns
+        ]
+
+
+        # =================================================
+        # VALIDACIÓN ESTRUCTURA
+        # =================================================
+
+        if columnas_faltantes:
+
+            st.error(
+                "❌ Faltan columnas en Historial físico:"
+            )
+
+            for columna in columnas_faltantes:
+
+                st.write(
+                    f"• {columna}"
+                )
+
+
+        else:
+
+            st.success(
+                "✅ Las 24 columnas del historial físico "
+                "están correctamente configuradas."
+            )
+
+
+        # =================================================
+        # NÚMERO DE REGISTROS
+        # =================================================
+
+        total_registros_fisicos = len(
+            df_historial_fisico
+        )
+
+
+        if total_registros_fisicos == 0:
+
+            st.info(
+                "Todavía no existen registros físicos."
+            )
+
+
+        else:
+
+            col_h1, col_h2, col_h3 = (
+                st.columns(3)
+            )
+
+
+            col_h1.metric(
+                "Registros físicos",
+                total_registros_fisicos
+            )
+
+
+            col_h2.metric(
+                "Alumnos",
+                df_historial_fisico[
+                    "Alumno"
+                ]
+                .dropna()
+                .nunique()
+            )
+
+
+            col_h3.metric(
+                "Ejercicios registrados",
+                df_historial_fisico[
+                    "Ejercicio"
+                ]
+                .dropna()
+                .nunique()
+            )
+
+
+            # =================================================
+            # REGISTROS INCOMPLETOS
+            # =================================================
+
+            columnas_obligatorias = [
+                "Semana",
+                "Sesión",
+                "Alumno",
+                "Ejercicio"
+            ]
+
+
+            registros_incompletos = (
+                df_historial_fisico[
+                    columnas_obligatorias
+                ]
+                .isna()
+                .any(
+                    axis=1
+                )
+                .sum()
+            )
+
+
+            if registros_incompletos > 0:
+
+                st.warning(
+                    f"🟠 Hay {registros_incompletos} "
+                    "registro(s) incompletos."
+                )
+
+            else:
+
+                st.success(
+                    "✅ No hay registros incompletos."
+                )
+
+
+            # =================================================
+            # DUPLICADOS
+            # =================================================
+
+            duplicados = (
+                df_historial_fisico
+                .duplicated(
+                    subset=[
+                        "Semana",
+                        "Sesión",
+                        "Alumno",
+                        "Ejercicio"
+                    ],
+                    keep=False
+                )
+            )
+
+
+            cantidad_duplicados = int(
+                duplicados.sum()
+            )
+
+
+            if cantidad_duplicados > 0:
+
+                st.warning(
+                    f"🟠 Se detectaron "
+                    f"{cantidad_duplicados} "
+                    "filas duplicadas."
+                )
+
+
+                st.dataframe(
+                    df_historial_fisico[
+                        duplicados
+                    ],
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+
+            else:
+
+                st.success(
+                    "✅ No hay duplicados por "
+                    "Semana + Sesión + Alumno + Ejercicio."
+                )
+
+
+            # =================================================
+            # ÚLTIMOS REGISTROS
+            # =================================================
+
+            st.markdown(
+                "### Últimos registros"
+            )
+
+
+            st.dataframe(
+                df_historial_fisico.tail(
+                    10
+                ),
+                use_container_width=True,
+                hide_index=True
+            )
+
+
+    except Exception as error:
+
+        st.error(
+            "No se pudo verificar el historial físico."
+        )
+
+        st.code(
+            str(
+                error
+            )
+        )
 
 
 # =========================================================
