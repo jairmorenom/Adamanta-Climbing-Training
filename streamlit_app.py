@@ -2517,7 +2517,11 @@ elif pagina == "Planear sesión":
                     df_ejercicios_fisico,
                     df_reglas_fisico
                 )
-
+                carga_por_zona = (
+                    resultado_carga_fisica[
+                        "Resultados"
+                    ]
+                )
 
                 # =================================================
                 # GUARDAR ACONDICIONAMIENTO
