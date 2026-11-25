@@ -3315,8 +3315,306 @@ elif pagina == "Planear sesión":
                             "No hay restricciones específicas "
                             "para la sesión de escalada."
                         )
+                                            # =================================================
+                    # PASO 3C-3 — COMPATIBILIDAD ESCALADA + FÍSICO
+                    # =================================================
+
+                    st.divider()
+
+                    st.markdown(
+                        "### Compatibilidad escalada + físico"
+                    )
 
 
+                    nivel_compatibilidad = (
+                        compatibilidad[
+                            "Nivel"
+                        ]
+                    )
+
+                    puntaje_compatibilidad = (
+                        compatibilidad[
+                            "Puntaje"
+                        ]
+                    )
+
+                    coincidencias_compatibilidad = (
+                        compatibilidad[
+                            "Coincidencias"
+                        ]
+                    )
+
+
+                    # =================================================
+                    # RESULTADO GENERAL
+                    # =================================================
+
+                    if (
+                        nivel_compatibilidad
+                        ==
+                        "COMPATIBLE"
+                    ):
+
+                        st.success(
+                            "✅ **COMPATIBLE**\n\n"
+                            "La carga del acondicionamiento físico "
+                            "presenta poca interferencia con las zonas "
+                            "más demandadas por esta sesión de escalada."
+                        )
+
+
+                    elif (
+                        nivel_compatibilidad
+                        ==
+                        "REVISAR"
+                    ):
+
+                        st.warning(
+                            "🟠 **REVISAR**\n\n"
+                            "Existe coincidencia entre algunas zonas "
+                            "cargadas en el acondicionamiento físico "
+                            "y las demandas de la sesión de escalada."
+                        )
+
+
+                    else:
+
+                        st.error(
+                            "🔴 **ALTA INTERFERENCIA**\n\n"
+                            "El acondicionamiento físico carga varias "
+                            "de las mismas zonas que serán muy demandadas "
+                            "durante esta sesión de escalada."
+                        )
+
+
+                    # =================================================
+                    # PUNTAJE
+                    # =================================================
+
+                    st.metric(
+                        "Puntaje de interferencia",
+                        f"{puntaje_compatibilidad:.1f}"
+                    )
+
+
+                    st.caption(
+                        "Menor puntaje = mayor compatibilidad. "
+                        "El resultado considera la demanda de la "
+                        "sesión de escalada, la carga física por zona "
+                        "y si el acondicionamiento se realiza antes "
+                        "o después de escalar."
+                    )
+
+
+                    # =================================================
+                    # ZONAS QUE GENERAN INTERFERENCIA
+                    # =================================================
+
+                    if coincidencias_compatibilidad:
+
+                        st.markdown(
+                            "#### Zonas a considerar"
+                        )
+
+
+                        filas_compatibilidad = []
+
+
+                        mapa_demanda_texto = {
+                            0: "Nula",
+                            1: "Baja",
+                            2: "Media",
+                            3: "Alta"
+                        }
+
+
+                        for coincidencia in (
+                            coincidencias_compatibilidad
+                        ):
+
+                            demanda_numero = (
+                                coincidencia[
+                                    "Demanda escalada"
+                                ]
+                            )
+
+
+                            filas_compatibilidad.append(
+                                {
+                                    "Zona":
+                                        coincidencia[
+                                            "Zona"
+                                        ],
+
+                                    "Demanda escalada":
+                                        mapa_demanda_texto.get(
+                                            demanda_numero,
+                                            str(
+                                                demanda_numero
+                                            )
+                                        ),
+
+                                    "Carga física":
+                                        coincidencia[
+                                            "Carga física"
+                                        ],
+
+                                    "Interferencia":
+                                        coincidencia[
+                                            "Puntaje"
+                                        ]
+                                }
+                            )
+
+
+                        df_compatibilidad_visual = (
+                            pd.DataFrame(
+                                filas_compatibilidad
+                            )
+                        )
+
+
+                        st.dataframe(
+                            df_compatibilidad_visual,
+                            use_container_width=True,
+                            hide_index=True
+                        )
+
+
+                    else:
+
+                        st.info(
+                            "No se detectaron coincidencias relevantes "
+                            "entre la carga física y las zonas más "
+                            "demandadas por esta sesión de escalada."
+                        )
+
+
+                    # =================================================
+                    # LECTURA PARA EL COACH
+                    # =================================================
+
+                    st.markdown(
+                        "#### Lectura para el coach"
+                    )
+
+
+                    if (
+                        nivel_compatibilidad
+                        ==
+                        "COMPATIBLE"
+                    ):
+
+                        st.write(
+                            "La combinación puede mantenerse "
+                            "como está planificada."
+                        )
+
+
+                    elif (
+                        nivel_compatibilidad
+                        ==
+                        "REVISAR"
+                    ):
+
+                        if (
+                            momento_fisico
+                            ==
+                            "Antes de escalar"
+                        ):
+
+                            st.write(
+                                "Conviene revisar el volumen o la intensidad "
+                                "del acondicionamiento antes de escalar, "
+                                "especialmente en las zonas señaladas."
+                            )
+
+                        else:
+
+                            st.write(
+                                "La combinación es exigente, pero al realizar "
+                                "el físico después de escalar se reduce su "
+                                "interferencia con el rendimiento principal "
+                                "de la sesión."
+                            )
+
+
+                    else:
+
+                        if (
+                            momento_fisico
+                            ==
+                            "Antes de escalar"
+                        ):
+
+                            st.write(
+                                "Considera mover el acondicionamiento físico "
+                                "después de escalar o reducir la carga de las "
+                                "zonas con mayor coincidencia."
+                            )
+
+                        else:
+
+                            st.write(
+                                "La carga combinada de la sesión es alta. "
+                                "Conviene revisar las zonas señaladas antes "
+                                "de añadir más volumen físico."
+                            )
+
+
+        # =====================================================
+        # GUARDAR SESIÓN COMPLETA
+        # =====================================================
+
+        if (
+            len(seleccion)
+            ==
+            cantidad
+        ):
+
+            st.session_state[
+                "sesion_planificada"
+            ] = {
+
+                "Semana":
+                    semana,
+
+                "Sesión":
+                    sesion,
+
+                "Bloque":
+                    bloque,
+
+                "Tipo":
+                    tipo_sesion,
+
+                "Ejercicios":
+                    seleccion,
+
+                "Volumen":
+                    float(
+                        volumen_total
+                    ),
+
+                "RPE":
+                    float(
+                        rpe_medio
+                    ),
+
+                "Carga":
+                    float(
+                        carga_planificada
+                    ),
+
+                "Acondicionamiento":
+                    acondicionamiento
+            }
+
+            st.success(
+                "Sesión lista para registrar."
+            )
+
+       
         # =====================================================
         # GUARDAR SESIÓN COMPLETA
         # =====================================================
