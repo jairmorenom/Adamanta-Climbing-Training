@@ -2638,16 +2638,132 @@ elif pagina == "Planear sesión":
                         carga_por_zona
                 }
                 # =================================================
-                # DEBUG TEMPORAL PASO 3A
+                # PASO 3B — MOSTRAR CARGA POR ZONA
                 # =================================================
 
-                st.write(
-                    "DEBUG CARGA FÍSICA"
+                st.markdown(
+                    "### Carga física por zona"
                 )
 
-                st.json(
-                    resultado_carga_fisica
+                filas_carga = []
+
+                for zona, datos in carga_por_zona.items():
+
+                    filas_carga.append(
+                        {
+                            "Zona": zona,
+                            "Carga": round(
+                                datos["Carga"],
+                                1
+                            ),
+                            "Nivel": datos["Nivel"]
+                        }
+                    )
+
+
+                df_carga_fisica_visual = pd.DataFrame(
+                    filas_carga
                 )
+
+
+                st.dataframe(
+                    df_carga_fisica_visual,
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+
+                # =================================================
+                # RESUMEN DE NIVELES
+                # =================================================
+
+                niveles_altos = sum(
+                    1
+                    for datos
+                    in carga_por_zona.values()
+                    if datos["Nivel"] == "ALTA"
+                )
+
+                niveles_medios = sum(
+                    1
+                    for datos
+                    in carga_por_zona.values()
+                    if datos["Nivel"] == "MEDIA"
+                )
+
+                niveles_bajos = sum(
+                    1
+                    for datos
+                    in carga_por_zona.values()
+                    if datos["Nivel"] == "BAJA"
+                )
+
+
+                col_n1, col_n2, col_n3 = st.columns(3)
+
+                col_n1.metric(
+                    "Zonas ALTA",
+                    niveles_altos
+                )
+
+                col_n2.metric(
+                    "Zonas MEDIA",
+                    niveles_medios
+                )
+
+                col_n3.metric(
+                    "Zonas BAJA",
+                    niveles_bajos
+                )
+
+
+                # =================================================
+                # RECOMENDACIONES
+                # =================================================
+
+                st.markdown(
+                    "### Recomendaciones para la escalada"
+                )
+
+                hay_alertas = False
+
+
+                for zona, datos in carga_por_zona.items():
+
+                    nivel = datos["Nivel"]
+
+                    recomendacion = datos[
+                        "Recomendación"
+                    ]
+
+
+                    if nivel == "ALTA":
+
+                        hay_alertas = True
+
+                        st.error(
+                            f"🔴 {zona} · ALTA\n\n"
+                            f"{recomendacion}"
+                        )
+
+
+                    elif nivel == "MEDIA":
+
+                        hay_alertas = True
+
+                        st.warning(
+                            f"🟠 {zona} · MEDIA\n\n"
+                            f"{recomendacion}"
+                        )
+
+
+                if not hay_alertas:
+
+                    st.success(
+                        "✅ Todas las zonas están en carga BAJA. "
+                        "No hay restricciones específicas "
+                        "para la sesión de escalada."
+                    )
 
                 # =================================================
                 # RESUMEN
