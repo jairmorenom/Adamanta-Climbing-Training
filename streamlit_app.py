@@ -4286,7 +4286,7 @@ elif pagina == "Acondicionamiento físico":
         f"{len(ejercicios_mostrar)} "
         f"de {total_ejercicios} ejercicios."
     )
-        # =====================================================
+    # =====================================================
     # PASO 4D — VERIFICAR HISTORIAL FÍSICO
     # =====================================================
 
@@ -4525,6 +4525,631 @@ elif pagina == "Acondicionamiento físico":
                 use_container_width=True,
                 hide_index=True
             )
+                    # =====================================================
+        # PASO 5A — DASHBOARD FÍSICO INDIVIDUAL
+        # =====================================================
+
+        st.divider()
+
+        st.subheader(
+            "Dashboard físico individual"
+        )
+
+        st.caption(
+            "Consulta el trabajo de acondicionamiento físico "
+            "registrado por atleta y por bloque."
+        )
+
+
+        if df_historial_fisico.empty:
+
+            st.info(
+                "Todavía no existen registros físicos "
+                "para generar el dashboard."
+            )
+
+
+        else:
+
+            # =================================================
+            # PREPARAR DATOS
+            # =================================================
+
+            df_dashboard_fisico = (
+                df_historial_fisico.copy()
+            )
+
+
+            columnas_numericas_dashboard = [
+                "Semana",
+                "Sesión",
+                "Series planificadas",
+                "Series reales",
+                "Repeticiones planificadas",
+                "Repeticiones reales",
+                "Carga externa planificada",
+                "Carga externa real",
+                "RPE planificado",
+                "RPE real",
+                "Dedos",
+                "Antebrazo / muñeca",
+                "Tracción (espalda/bíceps)",
+                "Empuje (pecho/tríceps)",
+                "Hombro",
+                "Core",
+                "Piernas / cadera",
+                "Puntaje interferencia"
+            ]
+
+
+            for columna in (
+                columnas_numericas_dashboard
+            ):
+
+                if columna in (
+                    df_dashboard_fisico.columns
+                ):
+
+                    df_dashboard_fisico[
+                        columna
+                    ] = pd.to_numeric(
+                        df_dashboard_fisico[
+                            columna
+                        ],
+                        errors="coerce"
+                    )
+
+
+            # =================================================
+            # ELIMINAR REGISTROS SIN DATOS BÁSICOS
+            # =================================================
+
+            df_dashboard_fisico = (
+                df_dashboard_fisico
+                .dropna(
+                    subset=[
+                        "Semana",
+                        "Sesión",
+                        "Alumno",
+                        "Ejercicio"
+                    ]
+                )
+            )
+
+
+            # =================================================
+            # ASIGNAR BLOQUE SEGÚN SEMANA
+            # =================================================
+
+            df_dashboard_fisico[
+                "Bloque"
+            ] = (
+                df_dashboard_fisico[
+                    "Semana"
+                ]
+                .apply(
+                    lambda semana:
+                        obtener_bloque(
+                            int(
+                                semana
+                            )
+                        )[0]
+                )
+            )
+
+
+            # =================================================
+            # CARGA FÍSICA TOTAL POR REGISTRO
+            # =================================================
+
+            zonas_dashboard = [
+                "Dedos",
+                "Antebrazo / muñeca",
+                "Tracción (espalda/bíceps)",
+                "Empuje (pecho/tríceps)",
+                "Hombro",
+                "Core",
+                "Piernas / cadera"
+            ]
+
+
+            df_dashboard_fisico[
+                "Carga física total"
+            ] = (
+                df_dashboard_fisico[
+                    zonas_dashboard
+                ]
+                .fillna(
+                    0
+                )
+                .sum(
+                    axis=1
+                )
+            )
+
+
+            # =================================================
+            # SELECCIÓN DE BLOQUE
+            # =================================================
+
+            bloque_fisico_dashboard = (
+                st.selectbox(
+                    "Bloque",
+                    [
+                        1,
+                        2,
+                        3,
+                        4
+                    ],
+                    index=None,
+                    placeholder=(
+                        "Selecciona un bloque..."
+                    ),
+                    key=(
+                        "dashboard_fisico_bloque"
+                    )
+                )
+            )
+
+
+            if bloque_fisico_dashboard is None:
+
+                st.info(
+                    "Selecciona un bloque para "
+                    "consultar el dashboard físico."
+                )
+
+
+            else:
+
+                # =============================================
+                # FILTRAR BLOQUE
+                # =============================================
+
+                df_dashboard_bloque = (
+                    df_dashboard_fisico[
+                        df_dashboard_fisico[
+                            "Bloque"
+                        ]
+                        ==
+                        bloque_fisico_dashboard
+                    ]
+                    .copy()
+                )
+
+
+                if df_dashboard_bloque.empty:
+
+                    st.info(
+                        "No hay registros físicos "
+                        "para este bloque."
+                    )
+
+
+                else:
+
+                    # =========================================
+                    # NOMBRE Y RANGO DEL BLOQUE
+                    # =========================================
+
+                    rangos_dashboard = {
+                        1: (
+                            1,
+                            13
+                        ),
+                        2: (
+                            14,
+                            26
+                        ),
+                        3: (
+                            27,
+                            39
+                        ),
+                        4: (
+                            40,
+                            52
+                        )
+                    }
+
+
+                    inicio_dashboard, fin_dashboard = (
+                        rangos_dashboard[
+                            bloque_fisico_dashboard
+                        ]
+                    )
+
+
+                    _, nombre_bloque_dashboard = (
+                        obtener_bloque(
+                            inicio_dashboard
+                        )
+                    )
+
+
+                    st.caption(
+                        f"Bloque "
+                        f"{bloque_fisico_dashboard} · "
+                        f"{nombre_bloque_dashboard} · "
+                        f"Semanas "
+                        f"{inicio_dashboard}–"
+                        f"{fin_dashboard}"
+                    )
+
+
+                    # =========================================
+                    # SELECCIÓN DE ALUMNO
+                    # =========================================
+
+                    alumnos_dashboard_fisico = (
+                        sorted(
+                            df_dashboard_bloque[
+                                "Alumno"
+                            ]
+                            .dropna()
+                            .astype(
+                                str
+                            )
+                            .str.strip()
+                            .unique()
+                            .tolist()
+                        )
+                    )
+
+
+                    alumno_dashboard_fisico = (
+                        st.selectbox(
+                            "Alumno",
+                            alumnos_dashboard_fisico,
+                            index=None,
+                            placeholder=(
+                                "Selecciona un alumno..."
+                            ),
+                            key=(
+                                "dashboard_fisico_alumno"
+                            )
+                        )
+                    )
+
+
+                    if (
+                        alumno_dashboard_fisico
+                        is None
+                    ):
+
+                        st.info(
+                            "Selecciona un alumno "
+                            "para ver su seguimiento físico."
+                        )
+
+
+                    else:
+
+                        # =====================================
+                        # FILTRAR ALUMNO
+                        # =====================================
+
+                        df_dashboard_alumno = (
+                            df_dashboard_bloque[
+                                df_dashboard_bloque[
+                                    "Alumno"
+                                ]
+                                .astype(
+                                    str
+                                )
+                                .str.strip()
+                                ==
+                                alumno_dashboard_fisico
+                            ]
+                            .copy()
+                        )
+
+
+                        # =====================================
+                        # MÉTRICAS PRINCIPALES
+                        # =====================================
+
+                        semanas_registradas = (
+                            df_dashboard_alumno[
+                                "Semana"
+                            ]
+                            .nunique()
+                        )
+
+
+                        sesiones_registradas = (
+                            df_dashboard_alumno[
+                                [
+                                    "Semana",
+                                    "Sesión"
+                                ]
+                            ]
+                            .drop_duplicates()
+                            .shape[0]
+                        )
+
+
+                        ejercicios_unicos = (
+                            df_dashboard_alumno[
+                                "Ejercicio"
+                            ]
+                            .nunique()
+                        )
+
+
+                        carga_fisica_acumulada = (
+                            df_dashboard_alumno[
+                                "Carga física total"
+                            ]
+                            .sum()
+                        )
+
+
+                        st.divider()
+
+                        st.subheader(
+                            alumno_dashboard_fisico
+                        )
+
+
+                        col_d1, col_d2, col_d3, col_d4 = (
+                            st.columns(
+                                4
+                            )
+                        )
+
+
+                        col_d1.metric(
+                            "Semanas registradas",
+                            int(
+                                semanas_registradas
+                            )
+                        )
+
+
+                        col_d2.metric(
+                            "Sesiones físicas",
+                            int(
+                                sesiones_registradas
+                            )
+                        )
+
+
+                        col_d3.metric(
+                            "Ejercicios diferentes",
+                            int(
+                                ejercicios_unicos
+                            )
+                        )
+
+
+                        col_d4.metric(
+                            "Carga física acumulada",
+                            f"{carga_fisica_acumulada:.1f}"
+                        )
+
+
+                        # =====================================
+                        # RANGO DE SEMANAS REGISTRADAS
+                        # =====================================
+
+                        semana_primera = int(
+                            df_dashboard_alumno[
+                                "Semana"
+                            ]
+                            .min()
+                        )
+
+
+                        semana_ultima = int(
+                            df_dashboard_alumno[
+                                "Semana"
+                            ]
+                            .max()
+                        )
+
+
+                        st.caption(
+                            f"Registros disponibles: "
+                            f"semana {semana_primera} "
+                            f"a semana {semana_ultima}."
+                        )
+
+
+                        # =====================================
+                        # RESUMEN SEMANAL
+                        # =====================================
+
+                        resumen_fisico_semanal = (
+                            df_dashboard_alumno
+                            .groupby(
+                                "Semana",
+                                as_index=False
+                            )
+                            .agg(
+                                {
+                                    "Sesión":
+                                        "nunique",
+
+                                    "Ejercicio":
+                                        "nunique",
+
+                                    "Carga física total":
+                                        "sum"
+                                }
+                            )
+                            .rename(
+                                columns={
+                                    "Sesión":
+                                        "Sesiones",
+
+                                    "Ejercicio":
+                                        "Ejercicios",
+
+                                    "Carga física total":
+                                        "Carga física"
+                                }
+                            )
+                            .sort_values(
+                                "Semana"
+                            )
+                        )
+
+
+                        resumen_fisico_semanal[
+                            "Carga física"
+                        ] = (
+                            resumen_fisico_semanal[
+                                "Carga física"
+                            ]
+                            .round(
+                                1
+                            )
+                        )
+
+
+                        # =====================================
+                        # GRÁFICA DE CARGA SEMANAL
+                        # =====================================
+
+                        st.markdown(
+                            "### Carga física por semana"
+                        )
+
+
+                        grafica_carga_fisica = (
+                            alt.Chart(
+                                resumen_fisico_semanal
+                            )
+                            .mark_line(
+                                point=True
+                            )
+                            .encode(
+
+                                x=alt.X(
+                                    "Semana:Q",
+                                    title="Semana"
+                                ),
+
+                                y=alt.Y(
+                                    "Carga física:Q",
+                                    title=(
+                                        "Carga física"
+                                    )
+                                ),
+
+                                tooltip=[
+                                    alt.Tooltip(
+                                        "Semana:Q",
+                                        title="Semana"
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Carga física:Q",
+                                        title=(
+                                            "Carga física"
+                                        ),
+                                        format=".1f"
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Sesiones:Q",
+                                        title="Sesiones"
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Ejercicios:Q",
+                                        title="Ejercicios"
+                                    )
+                                ]
+                            )
+                            .properties(
+                                height=350
+                            )
+                            .interactive()
+                        )
+
+
+                        st.altair_chart(
+                            grafica_carga_fisica,
+                            use_container_width=True
+                        )
+
+
+                        # =====================================
+                        # TABLA SEMANAL
+                        # =====================================
+
+                        st.markdown(
+                            "### Resumen semanal"
+                        )
+
+
+                        st.dataframe(
+                            resumen_fisico_semanal,
+                            use_container_width=True,
+                            hide_index=True
+                        )
+
+
+                        # =====================================
+                        # ÚLTIMOS EJERCICIOS REALIZADOS
+                        # =====================================
+
+                        st.markdown(
+                            "### Actividad física reciente"
+                        )
+
+
+                        columnas_actividad = [
+                            "Semana",
+                            "Sesión",
+                            "Tipo físico",
+                            "Momento",
+                            "Ejercicio",
+                            "Series reales",
+                            "Repeticiones reales",
+                            "Carga externa real",
+                            "RPE real",
+                            "Compatibilidad"
+                        ]
+
+
+                        columnas_actividad = [
+                            columna
+                            for columna in (
+                                columnas_actividad
+                            )
+                            if columna
+                            in df_dashboard_alumno.columns
+                        ]
+
+
+                        actividad_reciente = (
+                            df_dashboard_alumno
+                            .sort_values(
+                                [
+                                    "Semana",
+                                    "Sesión"
+                                ],
+                                ascending=[
+                                    False,
+                                    False
+                                ]
+                            )
+                            [
+                                columnas_actividad
+                            ]
+                            .head(
+                                10
+                            )
+                        )
+
+
+                        st.dataframe(
+                            actividad_reciente,
+                            use_container_width=True,
+                            hide_index=True
+                        )
 
 
     except Exception as error:
