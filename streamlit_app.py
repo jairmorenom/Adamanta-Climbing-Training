@@ -3663,10 +3663,6 @@ elif pagina == "Planear sesión":
                     acondicionamiento,
             }
 
-            st.success(
-                "Sesión lista para registrar."
-            )
-
 
 # =========================================================
 # ACONDICIONAMIENTO FÍSICO
