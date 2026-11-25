@@ -22,15 +22,9 @@ st.set_page_config(
 # =========================================================
 
 if not st.user.is_logged_in:
-
     st.title("ADAMANTA")
-    st.subheader(
-        "Sistema de planificación y seguimiento"
-    )
-
-    st.write(
-        "Inicia sesión con Google para continuar."
-    )
+    st.subheader("Sistema de planificación y seguimiento")
+    st.write("Inicia sesión con Google para continuar.")
 
     if st.button(
         "Iniciar sesión con Google",
@@ -53,17 +47,10 @@ except Exception:
 
 
 # =========================================================
-# GOOGLE SHEET
+# GOOGLE SHEET PRINCIPAL
 # =========================================================
 
-SPREADSHEET_ID = (
-    "1liLy4wqzh5-dx6TCAN7XF62Jx7TYfusbPwftT0B9kjA"
-)
-
-
-# =========================================================
-# HOJAS
-# =========================================================
+SPREADSHEET_ID = "1liLy4wqzh5-dx6TCAN7XF62Jx7TYfusbPwftT0B9kjA"
 
 HOJAS_EJERCICIOS = {
     1: "Lista de ejercicios Bloque 1",
@@ -72,7 +59,6 @@ HOJAS_EJERCICIOS = {
     4: "Lista de ejercicios bloque 4",
 }
 
-
 HOJAS_CARGA = {
     1: "Carga de ejercicios Bloque 1",
     2: "Carga de ejercicios Bloque 2",
@@ -80,61 +66,41 @@ HOJAS_CARGA = {
     4: "Carga de ejercicios Bloque 4",
 }
 
+
 # =========================================================
 # BASE DE DATOS ACONDICIONAMIENTO FÍSICO
 # =========================================================
 
-SPREADSHEET_ID_FISICO = (
-    "1b08hMJJafom4jtrpF0yRxWMcohpR_AjhMpv9XCzmd4k"
-)
+SPREADSHEET_ID_FISICO = "1b08hMJJafom4jtrpF0yRxWMcohpR_AjhMpv9XCzmd4k"
 
 HOJAS_FISICO = {
     "ejercicios": "Ejercicios",
     "reglas": "Reglas",
     "sesion": "Sesión",
-    "como_usar": "Cómo usar"
+    "como_usar": "Cómo usar",
 }
+
+
 # =========================================================
 # FUNCIONES GENERALES
 # =========================================================
 
 def limpiar_texto(valor):
-
     if pd.isna(valor):
         return ""
-
     return str(valor).strip()
 
 
 def obtener_bloque(semana):
-
     if 1 <= semana <= 13:
-
-        return (
-            1,
-            "Proyección en piedra"
-        )
-
+        return 1, "Proyección en piedra"
     elif 14 <= semana <= 26:
-
-        return (
-            2,
-            "Volumen, fuerza e hipertrofia"
-        )
-
+        return 2, "Volumen, fuerza e hipertrofia"
     elif 27 <= semana <= 39:
+        return 3, "Técnica avanzada + transición a competencia"
+    return 4, "Competencia + transición a roca"
 
-        return (
-            3,
-            "Técnica avanzada + transición a competencia"
-        )
 
-    else:
-
-        return (
-            4,
-            "Competencia + transición a roca"
-        )
 # =========================================================
 # MOTOR DE CARGA FÍSICA
 # =========================================================
@@ -146,79 +112,53 @@ ZONAS_FISICO = [
     "Empuje (pecho/tríceps)",
     "Hombro",
     "Core",
-    "Piernas / cadera"
+    "Piernas / cadera",
 ]
 
 
 def obtener_reglas_fisico(df_reglas):
-
     factores = {}
     umbrales = {}
 
     for _, fila in df_reglas.iterrows():
-
         valores = [
             limpiar_texto(valor)
             for valor in fila.tolist()
         ]
 
-        # =================================================
-        # FACTORES ANTES / DESPUÉS
-        # =================================================
-
         for indice, valor in enumerate(valores):
+            valor_normalizado = valor.strip().lower()
 
-            valor_normalizado = (
-                valor
-                .strip()
-                .lower()
-            )
+            if (
+                valor_normalizado == "antes"
+                and indice + 1 < len(fila)
+            ):
+                factor = pd.to_numeric(
+                    fila.iloc[indice + 1],
+                    errors="coerce"
+                )
 
-            if valor_normalizado == "antes":
+                if not pd.isna(factor):
+                    factores["Antes"] = float(factor)
 
-                if indice + 1 < len(fila):
+            elif (
+                valor_normalizado
+                in ["después", "despues"]
+                and indice + 1 < len(fila)
+            ):
+                factor = pd.to_numeric(
+                    fila.iloc[indice + 1],
+                    errors="coerce"
+                )
 
-                    factor = pd.to_numeric(
-                        fila.iloc[indice + 1],
-                        errors="coerce"
-                    )
-
-                    if not pd.isna(factor):
-
-                        factores["Antes"] = float(
-                            factor
-                        )
-
-
-            elif valor_normalizado in [
-                "después",
-                "despues"
-            ]:
-
-                if indice + 1 < len(fila):
-
-                    factor = pd.to_numeric(
-                        fila.iloc[indice + 1],
-                        errors="coerce"
-                    )
-
-                    if not pd.isna(factor):
-
-                        factores["Después"] = float(
-                            factor
-                        )
-
-
-        # =================================================
-        # UMBRALES POR ZONA
-        # =================================================
+                if not pd.isna(factor):
+                    factores["Después"] = float(factor)
 
         nombre = limpiar_texto(
             fila.iloc[0]
         )
 
         if nombre in ZONAS_FISICO:
-
             media = pd.to_numeric(
                 fila.iloc[1],
                 errors="coerce"
@@ -237,27 +177,18 @@ def obtener_reglas_fisico(df_reglas):
                 fila.iloc[4]
             )
 
-
             if (
                 not pd.isna(media)
                 and not pd.isna(alta)
             ):
-
                 umbrales[nombre] = {
-
-                    "Media":
-                        float(media),
-
-                    "Alta":
-                        float(alta),
-
+                    "Media": float(media),
+                    "Alta": float(alta),
                     "Recomendación MEDIA":
                         recomendacion_media,
-
                     "Recomendación ALTA":
-                        recomendacion_alta
+                        recomendacion_alta,
                 }
-
 
     return factores, umbrales
 
@@ -268,7 +199,6 @@ def calcular_carga_fisica(
     df_ejercicios,
     df_reglas
 ):
-
     factores, umbrales = (
         obtener_reglas_fisico(
             df_reglas
@@ -277,12 +207,9 @@ def calcular_carga_fisica(
 
     if momento == "Antes de escalar":
         clave_momento = "Antes"
-    else:
-        clave_momento = "Después"
-
-    if clave_momento == "Antes":
         factor_default = 1.0
     else:
+        clave_momento = "Después"
         factor_default = 0.5
 
     factor = factores.get(
@@ -296,7 +223,6 @@ def calcular_carga_fisica(
     }
 
     for ejercicio in ejercicios_fisicos:
-
         nombre_ejercicio = ejercicio[
             "Ejercicio"
         ]
@@ -331,12 +257,10 @@ def calcular_carga_fisica(
             )
         )
 
-        # ACTIVACIÓN NO SUMA CARGA
         if tipo.lower() == "activación":
             continue
 
         for zona in ZONAS_FISICO:
-
             calificacion = pd.to_numeric(
                 fila.get(
                     zona,
@@ -363,7 +287,6 @@ def calcular_carga_fisica(
     resultados = {}
 
     for zona in ZONAS_FISICO:
-
         carga = carga_zonas[
             zona
         ]
@@ -373,19 +296,15 @@ def calcular_carga_fisica(
         )
 
         if reglas_zona is None:
-
             resultados[zona] = {
-                "Carga": carga,
+                "Carga": float(carga),
                 "Nivel": "SIN REGLA",
-                "Recomendación": ""
+                "Recomendación": "",
             }
 
             continue
 
-        if carga >= reglas_zona[
-            "Alta"
-        ]:
-
+        if carga >= reglas_zona["Alta"]:
             nivel = "ALTA"
 
             recomendacion = (
@@ -394,10 +313,7 @@ def calcular_carga_fisica(
                 ]
             )
 
-        elif carga >= reglas_zona[
-            "Media"
-        ]:
-
+        elif carga >= reglas_zona["Media"]:
             nivel = "MEDIA"
 
             recomendacion = (
@@ -407,7 +323,6 @@ def calcular_carga_fisica(
             )
 
         else:
-
             nivel = "BAJA"
 
             recomendacion = (
@@ -417,12 +332,16 @@ def calcular_carga_fisica(
         resultados[zona] = {
             "Carga": float(carga),
             "Nivel": nivel,
-            "Recomendación": recomendacion
+            "Recomendación":
+                recomendacion,
         }
 
     return {
-        "Factor": float(factor),
-        "Resultados": resultados
+        "Factor":
+            float(factor),
+
+        "Resultados":
+            resultados,
     }
 
 
@@ -439,7 +358,7 @@ DEMANDA_ESCALADA = {
         "Empuje (pecho/tríceps)": 1,
         "Hombro": 2,
         "Core": 2,
-        "Piernas / cadera": 2
+        "Piernas / cadera": 2,
     },
 
     "simulación de competencia": {
@@ -449,7 +368,7 @@ DEMANDA_ESCALADA = {
         "Empuje (pecho/tríceps)": 2,
         "Hombro": 3,
         "Core": 3,
-        "Piernas / cadera": 3
+        "Piernas / cadera": 3,
     },
 
     "proyección": {
@@ -459,7 +378,7 @@ DEMANDA_ESCALADA = {
         "Empuje (pecho/tríceps)": 1,
         "Hombro": 2,
         "Core": 3,
-        "Piernas / cadera": 2
+        "Piernas / cadera": 2,
     },
 
     "corrección de técnica": {
@@ -469,7 +388,7 @@ DEMANDA_ESCALADA = {
         "Empuje (pecho/tríceps)": 1,
         "Hombro": 1,
         "Core": 1,
-        "Piernas / cadera": 1
+        "Piernas / cadera": 1,
     },
 
     "endurance técnico": {
@@ -479,7 +398,7 @@ DEMANDA_ESCALADA = {
         "Empuje (pecho/tríceps)": 1,
         "Hombro": 1,
         "Core": 2,
-        "Piernas / cadera": 1
+        "Piernas / cadera": 1,
     },
 
     "volumen/endurance técnico": {
@@ -489,7 +408,7 @@ DEMANDA_ESCALADA = {
         "Empuje (pecho/tríceps)": 1,
         "Hombro": 1,
         "Core": 2,
-        "Piernas / cadera": 1
+        "Piernas / cadera": 1,
     },
 
     "dinámicos": {
@@ -499,7 +418,7 @@ DEMANDA_ESCALADA = {
         "Empuje (pecho/tríceps)": 1,
         "Hombro": 3,
         "Core": 3,
-        "Piernas / cadera": 3
+        "Piernas / cadera": 3,
     },
 
     "coordinación": {
@@ -509,7 +428,7 @@ DEMANDA_ESCALADA = {
         "Empuje (pecho/tríceps)": 1,
         "Hombro": 2,
         "Core": 3,
-        "Piernas / cadera": 3
+        "Piernas / cadera": 3,
     },
 
     "habilidades técnicas": {
@@ -519,7 +438,7 @@ DEMANDA_ESCALADA = {
         "Empuje (pecho/tríceps)": 1,
         "Hombro": 1,
         "Core": 2,
-        "Piernas / cadera": 2
+        "Piernas / cadera": 2,
     },
 
     "movilidad aplicada": {
@@ -529,13 +448,14 @@ DEMANDA_ESCALADA = {
         "Empuje (pecho/tríceps)": 0,
         "Hombro": 1,
         "Core": 1,
-        "Piernas / cadera": 1
-    }
+        "Piernas / cadera": 1,
+    },
 }
+
+
 def obtener_demanda_escalada(
     tipo_sesion
 ):
-
     tipo_normalizado = (
         limpiar_texto(
             tipo_sesion
@@ -543,20 +463,10 @@ def obtener_demanda_escalada(
         .lower()
     )
 
-    # Si encontramos exactamente el tipo
     if tipo_normalizado in DEMANDA_ESCALADA:
-
         return DEMANDA_ESCALADA[
             tipo_normalizado
         ]
-
-
-    # ---------------------------------------------
-    # VALOR POR DEFECTO
-    # ---------------------------------------------
-    # Si aparece en la base un tipo nuevo que todavía
-    # no hemos clasificado, usamos demanda moderada.
-    # ---------------------------------------------
 
     return {
         "Dedos": 1,
@@ -565,49 +475,149 @@ def obtener_demanda_escalada(
         "Empuje (pecho/tríceps)": 1,
         "Hombro": 1,
         "Core": 1,
-        "Piernas / cadera": 1
+        "Piernas / cadera": 1,
     }
 
-def obtener_demanda_escalada(
-    tipo_sesion
-):
 
-    tipo_normalizado = (
-        limpiar_texto(
+# =========================================================
+# PASO 3C-2 — CALCULAR COMPATIBILIDAD
+# =========================================================
+
+def calcular_compatibilidad(
+    tipo_sesion,
+    carga_por_zona,
+    momento
+):
+    demanda_escalada = (
+        obtener_demanda_escalada(
             tipo_sesion
         )
-        .lower()
     )
 
-    if tipo_normalizado in DEMANDA_ESCALADA:
+    mapa_nivel_fisico = {
+        "BAJA": 0,
+        "MEDIA": 1,
+        "ALTA": 2,
+    }
 
-        return DEMANDA_ESCALADA[
-            tipo_normalizado
-        ]
+    puntaje_total = 0.0
+
+    coincidencias = []
+
+    for zona in ZONAS_FISICO:
+
+        demanda = (
+            demanda_escalada.get(
+                zona,
+                0
+            )
+        )
+
+        datos_fisicos = (
+            carga_por_zona.get(
+                zona,
+                {}
+            )
+        )
+
+        nivel_fisico = (
+            datos_fisicos.get(
+                "Nivel",
+                "BAJA"
+            )
+        )
+
+        intensidad_fisica = (
+            mapa_nivel_fisico.get(
+                nivel_fisico,
+                0
+            )
+        )
+
+        puntaje_zona = (
+            demanda
+            *
+            intensidad_fisica
+        )
+
+        if momento == "Antes de escalar":
+            puntaje_zona *= 1.25
+
+        puntaje_total += (
+            puntaje_zona
+        )
+
+        if (
+            demanda >= 2
+            and nivel_fisico in [
+                "MEDIA",
+                "ALTA"
+            ]
+        ):
+            coincidencias.append({
+                "Zona":
+                    zona,
+
+                "Demanda escalada":
+                    demanda,
+
+                "Carga física":
+                    nivel_fisico,
+
+                "Puntaje":
+                    round(
+                        puntaje_zona,
+                        1
+                    ),
+            })
+
+    if puntaje_total >= 12:
+        nivel = "ALTA INTERFERENCIA"
+
+    elif puntaje_total >= 6:
+        nivel = "REVISAR"
+
+    else:
+        nivel = "COMPATIBLE"
+
+    coincidencias = sorted(
+        coincidencias,
+        key=lambda x: x["Puntaje"],
+        reverse=True
+    )
 
     return {
-        "Dedos": 1,
-        "Antebrazo / muñeca": 1,
-        "Tracción (espalda/bíceps)": 1,
-        "Empuje (pecho/tríceps)": 1,
-        "Hombro": 1,
-        "Core": 1,
-        "Piernas / cadera": 1
+        "Puntaje":
+            round(
+                puntaje_total,
+                1
+            ),
+
+        "Nivel":
+            nivel,
+
+        "Coincidencias":
+            coincidencias,
+
+        "Demanda escalada":
+            demanda_escalada,
     }
 
 
 # =========================================================
 # LECTURA PÚBLICA DEL GOOGLE SHEET
 # =========================================================
+
 @st.cache_data(ttl=60)
 def leer_hoja(
     nombre_hoja,
     spreadsheet_id=SPREADSHEET_ID,
     header=0
 ):
-
-    nombre_codificado = urllib.parse.quote(
-        nombre_hoja
+    nombre_codificado = (
+        urllib.parse.quote(
+            nombre_hoja
+        )
     )
 
     url = (
@@ -622,7 +632,6 @@ def leer_hoja(
     )
 
     if header is not None:
-
         df.columns = (
             df.columns
             .astype(str)
@@ -631,18 +640,18 @@ def leer_hoja(
 
     return df
 
+
 # =========================================================
 # ACCESS TOKEN GOOGLE
 # =========================================================
 
 def obtener_access_token():
-
     try:
-
-        return st.user.tokens["access"]
+        return st.user.tokens[
+            "access"
+        ]
 
     except Exception:
-
         st.error(
             "No se encontró el token de Google."
         )
@@ -655,12 +664,14 @@ def obtener_access_token():
 
 
 def api_headers():
-
     token = obtener_access_token()
 
     return {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
+        "Authorization":
+            f"Bearer {token}",
+
+        "Content-Type":
+            "application/json",
     }
 
 
@@ -669,10 +680,11 @@ def api_headers():
 # =========================================================
 
 def sheets_get(rango):
-
-    rango_url = urllib.parse.quote(
-        rango,
-        safe=""
+    rango_url = (
+        urllib.parse.quote(
+            rango,
+            safe=""
+        )
     )
 
     url = (
@@ -688,7 +700,6 @@ def sheets_get(rango):
     )
 
     if respuesta.status_code == 401:
-
         st.error(
             "La sesión de Google expiró."
         )
@@ -700,19 +711,21 @@ def sheets_get(rango):
         st.stop()
 
     if respuesta.status_code == 403:
-
         st.error(
-            "Tu cuenta no tiene permiso para "
-            "modificar esta hoja."
+            "Tu cuenta no tiene permiso para modificar esta hoja."
         )
 
         st.stop()
 
     respuesta.raise_for_status()
 
-    return respuesta.json().get(
-        "values",
-        []
+    return (
+        respuesta
+        .json()
+        .get(
+            "values",
+            []
+        )
     )
 
 
@@ -720,10 +733,11 @@ def sheets_update(
     rango,
     valores
 ):
-
-    rango_url = urllib.parse.quote(
-        rango,
-        safe=""
+    rango_url = (
+        urllib.parse.quote(
+            rango,
+            safe=""
+        )
     )
 
     url = (
@@ -736,11 +750,18 @@ def sheets_update(
     respuesta = requests.put(
         url,
         headers=api_headers(),
+
         json={
-            "range": rango,
-            "majorDimension": "ROWS",
-            "values": valores
+            "range":
+                rango,
+
+            "majorDimension":
+                "ROWS",
+
+            "values":
+                valores,
         },
+
         timeout=20
     )
 
@@ -753,10 +774,11 @@ def sheets_append(
     rango,
     valores
 ):
-
-    rango_url = urllib.parse.quote(
-        rango,
-        safe=""
+    rango_url = (
+        urllib.parse.quote(
+            rango,
+            safe=""
+        )
     )
 
     url = (
@@ -770,10 +792,15 @@ def sheets_append(
     respuesta = requests.post(
         url,
         headers=api_headers(),
+
         json={
-            "majorDimension": "ROWS",
-            "values": valores
+            "majorDimension":
+                "ROWS",
+
+            "values":
+                valores,
         },
+
         timeout=20
     )
 
@@ -798,7 +825,6 @@ def guardar_historial(
     carga_planificada,
     carga_real
 ):
-
     valores = sheets_get(
         "'Historial semanal'!A:J"
     )
@@ -808,12 +834,32 @@ def guardar_historial(
         int(sesion),
         str(alumno),
         str(tipo_sesion),
-        float(round(volumen_planificado, 1)),
+        float(
+            round(
+                volumen_planificado,
+                1
+            )
+        ),
         int(volumen_real),
-        float(round(rpe_planificado, 1)),
+        float(
+            round(
+                rpe_planificado,
+                1
+            )
+        ),
         int(rpe_real),
-        float(round(carga_planificada, 1)),
-        float(round(carga_real, 1))
+        float(
+            round(
+                carga_planificada,
+                1
+            )
+        ),
+        float(
+            round(
+                carga_real,
+                1
+            )
+        ),
     ]
 
     fila_encontrada = None
@@ -822,58 +868,81 @@ def guardar_historial(
         valores[1:],
         start=2
     ):
-
         if len(fila) < 3:
             continue
 
         try:
-
             semana_existente = int(
-                float(fila[0])
+                float(
+                    fila[0]
+                )
             )
 
             sesion_existente = int(
-                float(fila[1])
+                float(
+                    fila[1]
+                )
             )
 
         except (
             ValueError,
             TypeError
         ):
-
             continue
 
         alumno_existente = (
-            str(fila[2])
+            str(
+                fila[2]
+            )
             .strip()
             .lower()
         )
 
         if (
-            semana_existente == int(semana)
-            and sesion_existente == int(sesion)
-            and alumno_existente
-            == str(alumno).strip().lower()
+            semana_existente
+            ==
+            int(
+                semana
+            )
+            and
+            sesion_existente
+            ==
+            int(
+                sesion
+            )
+            and
+            alumno_existente
+            ==
+            str(
+                alumno
+            )
+            .strip()
+            .lower()
         ):
+            fila_encontrada = (
+                numero_fila
+            )
 
-            fila_encontrada = numero_fila
             break
 
     if fila_encontrada:
-
         sheets_update(
             (
                 "'Historial semanal'!"
                 f"A{fila_encontrada}:J{fila_encontrada}"
             ),
-            [nueva_fila]
+            [
+                nueva_fila
+            ]
         )
 
         return "actualizado"
 
     sheets_append(
         "'Historial semanal'!A:J",
-        [nueva_fila]
+        [
+            nueva_fila
+        ]
     )
 
     return "creado"
@@ -888,13 +957,11 @@ def clasificar_estado(
     carga_pct,
     dif_rpe
 ):
-
     if (
         dif_rpe >= 2
         or carga_pct > 120
         or volumen_pct > 120
     ):
-
         return "ALTA"
 
     if (
@@ -902,7 +969,6 @@ def clasificar_estado(
         or carga_pct < 70
         or volumen_pct < 70
     ):
-
         return "REVISAR"
 
     if (
@@ -912,7 +978,6 @@ def clasificar_estado(
         or 115 < volumen_pct <= 120
         or 1 <= abs(dif_rpe) < 2
     ):
-
         return "MONITOREAR"
 
     return "OK"
@@ -927,84 +992,72 @@ def generar_estado(
     carga_pct,
     dif_rpe
 ):
-
     mensajes = []
 
     if dif_rpe >= 2:
-
         mensajes.append(
             "RPE mucho más alto de lo planificado"
         )
 
     elif dif_rpe >= 1:
-
         mensajes.append(
             "RPE ligeramente por encima del plan"
         )
 
     elif dif_rpe <= -2:
-
         mensajes.append(
             "RPE mucho más bajo de lo planificado"
         )
 
     elif dif_rpe <= -1:
-
         mensajes.append(
             "RPE ligeramente por debajo del plan"
         )
 
     if volumen_pct < 70:
-
         mensajes.append(
             "Volumen muy bajo"
         )
 
     elif volumen_pct < 85:
-
         mensajes.append(
             "Volumen ligeramente bajo"
         )
 
     elif volumen_pct > 120:
-
         mensajes.append(
             "Volumen muy alto"
         )
 
     elif volumen_pct > 115:
-
         mensajes.append(
             "Volumen ligeramente alto"
         )
 
     if carga_pct < 70:
-
         mensajes.append(
             "Carga muy baja"
         )
 
     elif carga_pct < 85:
-
         mensajes.append(
             "Carga ligeramente baja"
         )
 
     elif carga_pct > 120:
-
         mensajes.append(
             "Carga muy alta"
         )
 
     elif carga_pct > 115:
-
         mensajes.append(
             "Carga ligeramente alta"
         )
 
     if not mensajes:
-
-        return "Dentro de rango"
+        return (
+            "Dentro de rango"
+        )
 
     return " | ".join(
         mensajes
@@ -1020,18 +1073,15 @@ def generar_recomendacion(
     carga_pct,
     dif_rpe
 ):
-
     if dif_rpe >= 2:
 
         if carga_pct > 120:
-
             return (
                 "Reducir carga en la siguiente sesión "
                 "y revisar recuperación"
             )
 
         if volumen_pct < 85:
-
             return (
                 "No aumentar volumen; revisar fatiga "
                 "y calidad de ejecución"
@@ -1043,14 +1093,12 @@ def generar_recomendacion(
         )
 
     if carga_pct > 120:
-
         return (
             "Reducir volumen o intensidad "
             "en la siguiente sesión"
         )
 
     if volumen_pct > 120:
-
         return (
             "Reducir volumen y volver "
             "al rango planificado"
@@ -1059,7 +1107,6 @@ def generar_recomendacion(
     if volumen_pct < 70:
 
         if dif_rpe >= 1:
-
             return (
                 "No subir volumen todavía; "
                 "revisar por qué el esfuerzo fue alto"
@@ -1073,7 +1120,6 @@ def generar_recomendacion(
     if carga_pct < 70:
 
         if dif_rpe <= -1:
-
             return (
                 "Aumentar progresivamente "
                 "el estímulo de entrenamiento"
@@ -1087,7 +1133,6 @@ def generar_recomendacion(
     if 75 <= volumen_pct < 85:
 
         if dif_rpe >= 1:
-
             return (
                 "Mantener volumen por ahora "
                 "y monitorear el RPE"
@@ -1101,7 +1146,6 @@ def generar_recomendacion(
     if 75 <= carga_pct < 85:
 
         if dif_rpe < 0:
-
             return (
                 "Aumentar ligeramente el estímulo "
                 "si mantiene buena calidad"
@@ -1113,27 +1157,29 @@ def generar_recomendacion(
         )
 
     if 1 <= dif_rpe < 2:
-
         return (
-            "Mantener volumen y monitorear intensidad"
+            "Mantener volumen "
+            "y monitorear intensidad"
         )
 
     if -2 < dif_rpe <= -1:
-
         return (
             "Considerar aumentar ligeramente "
             "la dificultad"
         )
 
-    return "Mantener planificación actual"
+    return (
+        "Mantener planificación actual"
+    )
 
 
 # =========================================================
 # COACH INSIGHTS
 # =========================================================
 
-def generar_coach_insights(resumen):
-
+def generar_coach_insights(
+    resumen
+):
     insights = []
 
     if resumen.empty:
@@ -1141,55 +1187,85 @@ def generar_coach_insights(resumen):
 
     resumen = (
         resumen
-        .sort_values("Semana")
+        .sort_values(
+            "Semana"
+        )
         .copy()
     )
 
-    ultimas = resumen.tail(3).copy()
-    ultima = resumen.iloc[-1]
+    ultimas = (
+        resumen
+        .tail(
+            3
+        )
+        .copy()
+    )
 
-    # =====================================================
-    # CUMPLIMIENTO GENERAL
-    # =====================================================
+    ultima = (
+        resumen
+        .iloc[-1]
+    )
 
     volumen_plan_total = (
-        resumen["Volumen planificado"].sum()
+        resumen[
+            "Volumen planificado"
+        ]
+        .sum()
     )
 
     volumen_real_total = (
-        resumen["Volumen real"].sum()
+        resumen[
+            "Volumen real"
+        ]
+        .sum()
     )
 
     carga_plan_total = (
-        resumen["Carga planificada"].sum()
+        resumen[
+            "Carga planificada"
+        ]
+        .sum()
     )
 
     carga_real_total = (
-        resumen["Carga real"].sum()
+        resumen[
+            "Carga real"
+        ]
+        .sum()
     )
 
     volumen_pct_total = (
         volumen_real_total
-        / volumen_plan_total
-        * 100
+        /
+        volumen_plan_total
+        *
+        100
         if volumen_plan_total > 0
         else 0
     )
 
     carga_pct_total = (
         carga_real_total
-        / carga_plan_total
-        * 100
+        /
+        carga_plan_total
+        *
+        100
         if carga_plan_total > 0
         else 0
     )
 
     rpe_plan_total = (
-        resumen["RPE planificado"].mean()
+        resumen[
+            "RPE planificado"
+        ]
+        .mean()
     )
 
     rpe_real_total = (
-        resumen["RPE real"].mean()
+        resumen[
+            "RPE real"
+        ]
+        .mean()
     )
 
     dif_rpe_total = (
@@ -1198,165 +1274,250 @@ def generar_coach_insights(resumen):
         rpe_plan_total
     )
 
-    # =====================================================
-    # BUENA ADHERENCIA
-    # =====================================================
-
     if (
         90 <= volumen_pct_total <= 110
         and 90 <= carga_pct_total <= 110
-        and abs(dif_rpe_total) < 1
+        and abs(
+            dif_rpe_total
+        ) < 1
     ):
-
         insights.append({
-            "nivel": "POSITIVO",
-            "titulo": "Buena adherencia al plan",
-            "mensaje": (
-                f"El atleta acumula {volumen_pct_total:.1f}% "
-                f"del volumen y {carga_pct_total:.1f}% de la carga "
-                "planificada, con un RPE cercano al objetivo."
-            ),
-            "accion": (
-                "Mantener la planificación actual mientras "
-                "la calidad de ejecución siga siendo buena."
-            )
+            "nivel":
+                "POSITIVO",
+
+            "titulo":
+                "Buena adherencia al plan",
+
+            "mensaje":
+                (
+                    f"El atleta acumula "
+                    f"{volumen_pct_total:.1f}% "
+                    f"del volumen y "
+                    f"{carga_pct_total:.1f}% "
+                    "de la carga planificada, "
+                    "con un RPE cercano al objetivo."
+                ),
+
+            "accion":
+                (
+                    "Mantener la planificación actual "
+                    "mientras la calidad de ejecución "
+                    "siga siendo buena."
+                ),
         })
 
-    # =====================================================
-    # RPE RECIENTE
-    # =====================================================
-
-    if len(ultimas) >= 2:
-
+    if len(
+        ultimas
+    ) >= 2:
         rpe_alto = (
-            ultimas["Dif. RPE"]
-            >= 1
+            ultimas[
+                "Dif. RPE"
+            ]
+            >=
+            1
         )
 
-        if rpe_alto.tail(2).all():
-
-            insights.append({
-                "nivel": "ATENCION",
-                "titulo": "RPE por encima del plan",
-                "mensaje": (
-                    "Las últimas 2 semanas registradas presentan "
-                    "un RPE medio superior al plan."
-                ),
-                "accion": (
-                    "Evitar aumentar volumen o intensidad hasta "
-                    "comprobar si el RPE vuelve al rango previsto."
-                )
-            })
-
-    if len(ultimas) >= 3:
-
         if (
-            ultimas["Dif. RPE"]
-            >= 1
-        ).all():
-
+            rpe_alto
+            .tail(
+                2
+            )
+            .all()
+        ):
             insights.append({
-                "nivel": "ALERTA",
-                "titulo": "RPE elevado durante 3 semanas",
-                "mensaje": (
-                    "El esfuerzo percibido se ha mantenido por encima "
-                    "de lo planificado durante las últimas 3 semanas."
-                ),
-                "accion": (
-                    "Revisar la carga de la siguiente semana y considerar "
-                    "reducir temporalmente volumen o intensidad."
-                )
+                "nivel":
+                    "ATENCION",
+
+                "titulo":
+                    "RPE por encima del plan",
+
+                "mensaje":
+                    (
+                        "Las últimas 2 semanas registradas "
+                        "presentan un RPE medio superior al plan."
+                    ),
+
+                "accion":
+                    (
+                        "Evitar aumentar volumen o intensidad "
+                        "hasta comprobar si el RPE vuelve "
+                        "al rango previsto."
+                    ),
             })
 
-    # =====================================================
-    # ADAPTACIÓN POSITIVA
-    # =====================================================
+    if len(
+        ultimas
+    ) >= 3:
+        if (
+            ultimas[
+                "Dif. RPE"
+            ]
+            >=
+            1
+        ).all():
+            insights.append({
+                "nivel":
+                    "ALERTA",
 
-    if len(ultimas) >= 3:
+                "titulo":
+                    "RPE elevado durante 3 semanas",
 
-        primera = ultimas.iloc[0]
-        reciente = ultimas.iloc[-1]
+                "mensaje":
+                    (
+                        "El esfuerzo percibido se ha mantenido "
+                        "por encima de lo planificado durante "
+                        "las últimas 3 semanas."
+                    ),
+
+                "accion":
+                    (
+                        "Revisar la carga de la siguiente semana "
+                        "y considerar reducir temporalmente "
+                        "volumen o intensidad."
+                    ),
+            })
+
+    if len(
+        ultimas
+    ) >= 3:
+        primera = (
+            ultimas.iloc[0]
+        )
+
+        reciente = (
+            ultimas.iloc[-1]
+        )
 
         aumento_volumen = (
-            reciente["Volumen real"]
+            reciente[
+                "Volumen real"
+            ]
             >
-            primera["Volumen real"] * 1.05
+            primera[
+                "Volumen real"
+            ]
+            *
+            1.05
         )
 
         rpe_estable = (
-            reciente["RPE real"]
+            reciente[
+                "RPE real"
+            ]
             <=
-            primera["RPE real"] + 0.5
+            primera[
+                "RPE real"
+            ]
+            +
+            0.5
         )
 
-        if aumento_volumen and rpe_estable:
-
+        if (
+            aumento_volumen
+            and
+            rpe_estable
+        ):
             insights.append({
-                "nivel": "POSITIVO",
-                "titulo": "Posible adaptación positiva",
-                "mensaje": (
-                    "El volumen real ha aumentado en las últimas semanas "
-                    "sin un aumento proporcional del RPE."
-                ),
-                "accion": (
-                    "Mantener la progresión prevista. Si la técnica y la "
-                    "recuperación son buenas, puede continuar el incremento "
-                    "gradual planificado."
-                )
+                "nivel":
+                    "POSITIVO",
+
+                "titulo":
+                    "Posible adaptación positiva",
+
+                "mensaje":
+                    (
+                        "El volumen real ha aumentado "
+                        "en las últimas semanas sin "
+                        "un aumento proporcional del RPE."
+                    ),
+
+                "accion":
+                    (
+                        "Mantener la progresión prevista. "
+                        "Si la técnica y la recuperación son buenas, "
+                        "puede continuar el incremento gradual planificado."
+                    ),
             })
 
-    # =====================================================
-    # MENOS VOLUMEN + MAYOR RPE
-    # =====================================================
+    if len(
+        ultimas
+    ) >= 2:
+        anterior = (
+            ultimas.iloc[-2]
+        )
 
-    if len(ultimas) >= 2:
-
-        anterior = ultimas.iloc[-2]
-        reciente = ultimas.iloc[-1]
+        reciente = (
+            ultimas.iloc[-1]
+        )
 
         volumen_baja = (
-            reciente["Volumen real"]
+            reciente[
+                "Volumen real"
+            ]
             <
-            anterior["Volumen real"] * 0.90
+            anterior[
+                "Volumen real"
+            ]
+            *
+            0.90
         )
 
         rpe_sube = (
-            reciente["RPE real"]
+            reciente[
+                "RPE real"
+            ]
             >
-            anterior["RPE real"] + 0.5
+            anterior[
+                "RPE real"
+            ]
+            +
+            0.5
         )
 
-        if volumen_baja and rpe_sube:
-
+        if (
+            volumen_baja
+            and
+            rpe_sube
+        ):
             insights.append({
-                "nivel": "ALERTA",
-                "titulo": "Menor volumen con mayor esfuerzo",
-                "mensaje": (
-                    "La última semana produjo menos volumen que la anterior, "
-                    "pero con un RPE mayor."
-                ),
-                "accion": (
-                    "No progresar la carga todavía. Revisar recuperación, "
-                    "dificultad de los ejercicios y calidad técnica."
-                )
+                "nivel":
+                    "ALERTA",
+
+                "titulo":
+                    "Menor volumen con mayor esfuerzo",
+
+                "mensaje":
+                    (
+                        "La última semana produjo menos volumen "
+                        "que la anterior, pero con un RPE mayor."
+                    ),
+
+                "accion":
+                    (
+                        "No progresar la carga todavía. "
+                        "Revisar recuperación, dificultad de los ejercicios "
+                        "y calidad técnica."
+                    ),
             })
 
-    # =====================================================
-    # CAMBIO DE CARGA
-    # =====================================================
-
-    if len(ultimas) >= 3:
-
+    if len(
+        ultimas
+    ) >= 3:
         carga_inicio = (
-            ultimas.iloc[0]["Carga real"]
+            ultimas
+            .iloc[0][
+                "Carga real"
+            ]
         )
 
         carga_final = (
-            ultimas.iloc[-1]["Carga real"]
+            ultimas
+            .iloc[-1][
+                "Carga real"
+            ]
         )
 
         if carga_inicio > 0:
-
             cambio_carga = (
                 (
                     carga_final
@@ -1370,107 +1531,138 @@ def generar_coach_insights(resumen):
             )
 
             if cambio_carga > 20:
-
                 insights.append({
-                    "nivel": "ATENCION",
-                    "titulo": "Aumento rápido de carga",
-                    "mensaje": (
-                        f"La carga real aumentó aproximadamente "
-                        f"{cambio_carga:.1f}% entre la primera y la última "
-                        "de las 3 semanas recientes."
-                    ),
-                    "accion": (
-                        "Confirmar que el aumento estaba previsto antes de "
-                        "seguir progresando la siguiente semana."
-                    )
+                    "nivel":
+                        "ATENCION",
+
+                    "titulo":
+                        "Aumento rápido de carga",
+
+                    "mensaje":
+                        (
+                            f"La carga real aumentó aproximadamente "
+                            f"{cambio_carga:.1f}% entre la primera "
+                            "y la última de las 3 semanas recientes."
+                        ),
+
+                    "accion":
+                        (
+                            "Confirmar que el aumento estaba previsto "
+                            "antes de seguir progresando la siguiente semana."
+                        ),
                 })
 
             elif cambio_carga < -20:
-
                 insights.append({
-                    "nivel": "ATENCION",
-                    "titulo": "Caída marcada de carga",
-                    "mensaje": (
-                        f"La carga real disminuyó aproximadamente "
-                        f"{abs(cambio_carga):.1f}% durante las últimas "
-                        "3 semanas."
-                    ),
-                    "accion": (
-                        "Revisar si corresponde a una descarga programada, "
-                        "ausencias o menor cumplimiento del entrenamiento."
-                    )
+                    "nivel":
+                        "ATENCION",
+
+                    "titulo":
+                        "Caída marcada de carga",
+
+                    "mensaje":
+                        (
+                            f"La carga real disminuyó aproximadamente "
+                            f"{abs(cambio_carga):.1f}% durante "
+                            "las últimas 3 semanas."
+                        ),
+
+                    "accion":
+                        (
+                            "Revisar si corresponde a una descarga programada, "
+                            "ausencias o menor cumplimiento del entrenamiento."
+                        ),
                 })
 
-    # =====================================================
-    # ÚLTIMA SEMANA
-    # =====================================================
-
     volumen_ultima = (
-        ultima["Volumen %"]
+        ultima[
+            "Volumen %"
+        ]
     )
 
     carga_ultima = (
-        ultima["Carga %"]
+        ultima[
+            "Carga %"
+        ]
     )
 
     dif_rpe_ultima = (
-        ultima["Dif. RPE"]
+        ultima[
+            "Dif. RPE"
+        ]
     )
 
     if (
         volumen_ultima < 80
-        and dif_rpe_ultima < 1
+        and
+        dif_rpe_ultima < 1
     ):
-
         insights.append({
-            "nivel": "ATENCION",
-            "titulo": "Volumen por debajo del objetivo",
-            "mensaje": (
-                f"La última semana alcanzó solamente "
-                f"{volumen_ultima:.1f}% del volumen planificado."
-            ),
-            "accion": (
-                "Identificar si hubo ausencias o ejercicios incompletos. "
-                "Si el RPE y la técnica fueron adecuados, recuperar volumen "
-                "de forma progresiva."
-            )
+            "nivel":
+                "ATENCION",
+
+            "titulo":
+                "Volumen por debajo del objetivo",
+
+            "mensaje":
+                (
+                    f"La última semana alcanzó solamente "
+                    f"{volumen_ultima:.1f}% "
+                    "del volumen planificado."
+                ),
+
+            "accion":
+                (
+                    "Identificar si hubo ausencias o ejercicios incompletos. "
+                    "Si el RPE y la técnica fueron adecuados, recuperar volumen "
+                    "de forma progresiva."
+                ),
         })
 
     if (
         carga_ultima > 120
-        or volumen_ultima > 120
+        or
+        volumen_ultima > 120
     ):
-
         insights.append({
-            "nivel": "ALERTA",
-            "titulo": "La última semana superó el plan",
-            "mensaje": (
-                f"Volumen: {volumen_ultima:.1f}% · "
-                f"Carga: {carga_ultima:.1f}% del objetivo."
-            ),
-            "accion": (
-                "Evitar seguir aumentando la siguiente sesión sin revisar "
-                "si el exceso de carga fue intencional."
-            )
+            "nivel":
+                "ALERTA",
+
+            "titulo":
+                "La última semana superó el plan",
+
+            "mensaje":
+                (
+                    f"Volumen: {volumen_ultima:.1f}% · "
+                    f"Carga: {carga_ultima:.1f}% del objetivo."
+                ),
+
+            "accion":
+                (
+                    "Evitar seguir aumentando la siguiente sesión "
+                    "sin revisar si el exceso de carga fue intencional."
+                ),
         })
 
-    # =====================================================
-    # SIN SEÑALES RELEVANTES
-    # =====================================================
-
     if not insights:
-
         insights.append({
-            "nivel": "ESTABLE",
-            "titulo": "Respuesta estable",
-            "mensaje": (
-                "No se detectan desviaciones importantes respecto "
-                "a la planificación con los datos disponibles."
-            ),
-            "accion": (
-                "Mantener el plan y continuar registrando volumen, "
-                "RPE y carga."
-            )
+            "nivel":
+                "ESTABLE",
+
+            "titulo":
+                "Respuesta estable",
+
+            "mensaje":
+                (
+                    "No se detectan desviaciones importantes "
+                    "respecto a la planificación con los datos disponibles."
+                ),
+
+            "accion":
+                (
+                    "Mantener el plan y continuar registrando "
+                    "volumen, RPE y carga."
+                ),
         })
 
     return insights[:5]
@@ -1483,31 +1675,41 @@ def generar_coach_insights(resumen):
 def actualizar_seguimiento_bloque(
     bloque
 ):
-
     valores = sheets_get(
         "'Historial semanal'!A:J"
     )
 
-    if len(valores) <= 1:
+    if len(
+        valores
+    ) <= 1:
         return
 
-    encabezados = valores[0]
+    encabezados = (
+        valores[0]
+    )
 
     filas = []
 
     for fila in valores[1:]:
-
         fila_completa = (
             fila
-            + [""] * (
-                len(encabezados)
-                - len(fila)
+            +
+            [""] * (
+                len(
+                    encabezados
+                )
+                -
+                len(
+                    fila
+                )
             )
         )
 
         filas.append(
             fila_completa[
-                :len(encabezados)
+                :len(
+                    encabezados
+                )
             ]
         )
 
@@ -1524,32 +1726,51 @@ def actualizar_seguimiento_bloque(
         "RPE planificado",
         "RPE real",
         "Carga planificada",
-        "Carga real"
+        "Carga real",
     ]
 
     for columna in columnas_numericas:
-
         if columna in df.columns:
-
-            df[columna] = pd.to_numeric(
-                df[columna],
-                errors="coerce"
+            df[columna] = (
+                pd.to_numeric(
+                    df[columna],
+                    errors="coerce"
+                )
             )
 
     rangos = {
         1: (1, 13),
         2: (14, 26),
         3: (27, 39),
-        4: (40, 52)
+        4: (40, 52),
     }
 
-    inicio, fin = rangos[bloque]
+    inicio, fin = (
+        rangos[
+            bloque
+        ]
+    )
 
-    df_bloque = df[
-        (df["Semana"] >= inicio)
-        &
-        (df["Semana"] <= fin)
-    ].copy()
+    df_bloque = (
+        df[
+            (
+                df[
+                    "Semana"
+                ]
+                >=
+                inicio
+            )
+            &
+            (
+                df[
+                    "Semana"
+                ]
+                <=
+                fin
+            )
+        ]
+        .copy()
+    )
 
     df_bloque = (
         df_bloque
@@ -1562,7 +1783,7 @@ def actualizar_seguimiento_bloque(
                 "RPE planificado",
                 "RPE real",
                 "Carga planificada",
-                "Carga real"
+                "Carga real",
             ]
         )
     )
@@ -1570,8 +1791,12 @@ def actualizar_seguimiento_bloque(
     if df_bloque.empty:
         return
 
-    df_bloque["Alumno"] = (
-        df_bloque["Alumno"]
+    df_bloque[
+        "Alumno"
+    ] = (
+        df_bloque[
+            "Alumno"
+        ]
         .astype(str)
         .str.strip()
         .str.title()
@@ -1580,7 +1805,8 @@ def actualizar_seguimiento_bloque(
     semana_actual = int(
         df_bloque[
             "Semana"
-        ].max()
+        ]
+        .max()
     )
 
     resumen = (
@@ -1590,12 +1816,23 @@ def actualizar_seguimiento_bloque(
             as_index=False
         )
         .agg({
-            "Volumen planificado": "sum",
-            "Volumen real": "sum",
-            "RPE planificado": "mean",
-            "RPE real": "mean",
-            "Carga planificada": "sum",
-            "Carga real": "sum"
+            "Volumen planificado":
+                "sum",
+
+            "Volumen real":
+                "sum",
+
+            "RPE planificado":
+                "mean",
+
+            "RPE real":
+                "mean",
+
+            "Carga planificada":
+                "sum",
+
+            "Carga real":
+                "sum",
         })
     )
 
@@ -1606,41 +1843,54 @@ def actualizar_seguimiento_bloque(
     )
 
     for _, fila in resumen.iterrows():
+        alumno = (
+            fila[
+                "Alumno"
+            ]
+        )
 
-        alumno = fila["Alumno"]
+        volumen_pct = (
+            fila[
+                "Volumen real"
+            ]
+            /
+            fila[
+                "Volumen planificado"
+            ]
+            *
+            100
+            if fila[
+                "Volumen planificado"
+            ] > 0
+            else 0
+        )
 
-        if fila["Volumen planificado"] > 0:
-
-            volumen_pct = (
-                fila["Volumen real"]
-                /
-                fila["Volumen planificado"]
-                * 100
-            )
-
-        else:
-
-            volumen_pct = 0
-
-        if fila["Carga planificada"] > 0:
-
-            carga_pct = (
-                fila["Carga real"]
-                /
-                fila["Carga planificada"]
-                * 100
-            )
-
-        else:
-
-            carga_pct = 0
+        carga_pct = (
+            fila[
+                "Carga real"
+            ]
+            /
+            fila[
+                "Carga planificada"
+            ]
+            *
+            100
+            if fila[
+                "Carga planificada"
+            ] > 0
+            else 0
+        )
 
         rpe_plan = float(
-            fila["RPE planificado"]
+            fila[
+                "RPE planificado"
+            ]
         )
 
         rpe_real = float(
-            fila["RPE real"]
+            fila[
+                "RPE real"
+            ]
         )
 
         dif_rpe = (
@@ -1649,36 +1899,59 @@ def actualizar_seguimiento_bloque(
             rpe_plan
         )
 
-        nivel = clasificar_estado(
-            volumen_pct,
-            carga_pct,
-            dif_rpe
+        nivel = (
+            clasificar_estado(
+                volumen_pct,
+                carga_pct,
+                dif_rpe
+            )
         )
 
-        estado = generar_estado(
-            volumen_pct,
-            carga_pct,
-            dif_rpe
+        estado = (
+            generar_estado(
+                volumen_pct,
+                carga_pct,
+                dif_rpe
+            )
         )
 
-        recomendacion = generar_recomendacion(
-            volumen_pct,
-            carga_pct,
-            dif_rpe
+        recomendacion = (
+            generar_recomendacion(
+                volumen_pct,
+                carga_pct,
+                dif_rpe
+            )
         )
 
         nueva_fila = [
-            int(bloque),
+            int(
+                bloque
+            ),
             semana_actual,
             alumno,
-            round(volumen_pct, 1),
-            round(rpe_plan, 1),
-            round(rpe_real, 1),
-            round(dif_rpe, 1),
-            round(carga_pct, 1),
+            round(
+                volumen_pct,
+                1
+            ),
+            round(
+                rpe_plan,
+                1
+            ),
+            round(
+                rpe_real,
+                1
+            ),
+            round(
+                dif_rpe,
+                1
+            ),
+            round(
+                carga_pct,
+                1
+            ),
             nivel,
             estado,
-            recomendacion
+            recomendacion,
         ]
 
         fila_encontrada = None
@@ -1687,119 +1960,167 @@ def actualizar_seguimiento_bloque(
             seguimiento_existente[1:],
             start=2
         ):
-
-            if len(existente) < 3:
+            if len(
+                existente
+            ) < 3:
                 continue
 
             try:
-
                 bloque_existente = int(
-                    float(existente[0])
+                    float(
+                        existente[0]
+                    )
                 )
 
                 semana_existente = int(
-                    float(existente[1])
+                    float(
+                        existente[1]
+                    )
                 )
 
             except (
                 ValueError,
                 TypeError
             ):
-
                 continue
 
             alumno_existente = (
-                str(existente[2])
+                str(
+                    existente[2]
+                )
                 .strip()
                 .lower()
             )
 
             if (
-                bloque_existente == int(bloque)
-                and semana_existente == semana_actual
-                and alumno_existente
-                == alumno.strip().lower()
+                bloque_existente
+                ==
+                int(
+                    bloque
+                )
+                and
+                semana_existente
+                ==
+                semana_actual
+                and
+                alumno_existente
+                ==
+                alumno
+                .strip()
+                .lower()
             ):
+                fila_encontrada = (
+                    numero_fila
+                )
 
-                fila_encontrada = numero_fila
                 break
 
         if fila_encontrada:
-
             sheets_update(
                 (
                     "'Seguimiento por bloque'!"
                     f"A{fila_encontrada}:K{fila_encontrada}"
                 ),
-                [nueva_fila]
+                [
+                    nueva_fila
+                ]
             )
 
         else:
-
             sheets_append(
                 "'Seguimiento por bloque'!A:K",
-                [nueva_fila]
+                [
+                    nueva_fila
+                ]
             )
 
             seguimiento_existente.append(
                 nueva_fila
             )
 
+
 # =========================================================
 # CARGAR BASE DE ACONDICIONAMIENTO FÍSICO
 # =========================================================
 
 try:
-
-    df_ejercicios_fisico = leer_hoja(
-        HOJAS_FISICO["ejercicios"],
-        SPREADSHEET_ID_FISICO
+    df_ejercicios_fisico = (
+        leer_hoja(
+            HOJAS_FISICO[
+                "ejercicios"
+            ],
+            SPREADSHEET_ID_FISICO
+        )
     )
 
-    df_reglas_fisico = leer_hoja(
-        HOJAS_FISICO["reglas"],
-        SPREADSHEET_ID_FISICO,
-        header=None
+    df_reglas_fisico = (
+        leer_hoja(
+            HOJAS_FISICO[
+                "reglas"
+            ],
+            SPREADSHEET_ID_FISICO,
+            header=None
+        )
     )
 
-    BASE_FISICO_CONECTADA = True
-
+    BASE_FISICO_CONECTADA = (
+        True
+    )
 
 except Exception as e:
+    df_ejercicios_fisico = (
+        pd.DataFrame()
+    )
 
-    df_ejercicios_fisico = pd.DataFrame()
-    df_reglas_fisico = pd.DataFrame()
+    df_reglas_fisico = (
+        pd.DataFrame()
+    )
 
-    BASE_FISICO_CONECTADA = False
+    BASE_FISICO_CONECTADA = (
+        False
+    )
 
-    ERROR_BASE_FISICO = str(e)
-    
+    ERROR_BASE_FISICO = (
+        str(
+            e
+        )
+    )
+
+
 # =========================================================
 # CARGAR DATOS PRINCIPALES
 # =========================================================
 
 try:
-
-    df_distribucion = leer_hoja(
-        "Distribucion semanal"
+    df_distribucion = (
+        leer_hoja(
+            "Distribucion semanal"
+        )
     )
 
-    df_alumnos = leer_hoja(
-        "Alumnos"
+    df_alumnos = (
+        leer_hoja(
+            "Alumnos"
+        )
     )
 
-    conexion_ok = True
+    conexion_ok = (
+        True
+    )
 
 except Exception as error:
-
-    conexion_ok = False
+    conexion_ok = (
+        False
+    )
 
     st.error(
         "No se pudo leer la base de datos."
     )
 
     st.code(
-        str(error)
+        str(
+            error
+        )
     )
 
 
@@ -1816,35 +2137,34 @@ st.sidebar.caption(
 )
 
 if conexion_ok:
-
     st.sidebar.success(
         "Base de datos conectada"
     )
 
 else:
-
     st.sidebar.error(
         "Sin conexión"
     )
 
-pagina = st.sidebar.radio(
-    "Navegación",
-    [
-        "Inicio",
-        "Planear sesión",
-        "Acondicionamiento físico",
-        "Registrar sesión",
-        "Seguimiento",
-        "Vista grupo",
-        "Alertas"
-    ]
+pagina = (
+    st.sidebar.radio(
+        "Navegación",
+        [
+            "Inicio",
+            "Planear sesión",
+            "Acondicionamiento físico",
+            "Registrar sesión",
+            "Seguimiento",
+            "Vista grupo",
+            "Alertas",
+        ]
+    )
 )
 
 if st.sidebar.button(
     "Cerrar sesión",
     use_container_width=True
 ):
-
     st.logout()
 
 
@@ -1860,9 +2180,13 @@ if not conexion_ok:
 # DISTRIBUCIÓN SEMANAL
 # =========================================================
 
-df_distribucion["Semana"] = (
+df_distribucion[
+    "Semana"
+] = (
     pd.to_numeric(
-        df_distribucion["Semana"],
+        df_distribucion[
+            "Semana"
+        ],
         errors="coerce"
     )
 )
@@ -1873,9 +2197,10 @@ df_distribucion["Semana"] = (
 # =========================================================
 
 if "Nombre" in df_alumnos.columns:
-
     alumnos = (
-        df_alumnos["Nombre"]
+        df_alumnos[
+            "Nombre"
+        ]
         .dropna()
         .astype(str)
         .str.strip()
@@ -1883,7 +2208,6 @@ if "Nombre" in df_alumnos.columns:
     )
 
 else:
-
     alumnos = (
         df_alumnos
         .iloc[:, 0]
@@ -1899,7 +2223,6 @@ else:
 # =========================================================
 
 if pagina == "Inicio":
-
     st.title(
         "ADAMANTA"
     )
@@ -1914,7 +2237,11 @@ if pagina == "Inicio":
 
     st.divider()
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3 = (
+        st.columns(
+            3
+        )
+    )
 
     col1.metric(
         "Semanas programadas",
@@ -1928,7 +2255,9 @@ if pagina == "Inicio":
 
     col3.metric(
         "Alumnos",
-        len(alumnos)
+        len(
+            alumnos
+        )
     )
 
     st.divider()
@@ -1939,7 +2268,8 @@ if pagina == "Inicio":
 
     st.dataframe(
         pd.DataFrame({
-            "Alumno": alumnos
+            "Alumno":
+                alumnos
         }),
         use_container_width=True,
         hide_index=True
@@ -1951,38 +2281,55 @@ if pagina == "Inicio":
 # =========================================================
 
 elif pagina == "Planear sesión":
-
     st.title(
         "Planear sesión"
     )
 
     st.caption(
-        "La programación se obtiene directamente "
-        "de la base de datos."
+        "La programación se obtiene directamente de la base de datos."
     )
 
-    col1, col2 = st.columns(2)
+    col1, col2 = (
+        st.columns(
+            2
+        )
+    )
 
     with col1:
-
-        semana = st.selectbox(
-            "Semana",
-            list(range(1, 53)),
-            index=None,
-            placeholder="Selecciona una semana..."
+        semana = (
+            st.selectbox(
+                "Semana",
+                list(
+                    range(
+                        1,
+                        53
+                    )
+                ),
+                index=None,
+                placeholder="Selecciona una semana..."
+            )
         )
 
     with col2:
-
-        sesion = st.selectbox(
-            "Sesión",
-            [1, 2, 3, 4],
-            index=None,
-            placeholder="Selecciona una sesión..."
+        sesion = (
+            st.selectbox(
+                "Sesión",
+                [
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                index=None,
+                placeholder="Selecciona una sesión..."
+            )
         )
 
-    if semana is None or sesion is None:
-
+    if (
+        semana is None
+        or
+        sesion is None
+    ):
         st.info(
             "Selecciona una semana y una sesión para comenzar."
         )
@@ -1997,8 +2344,11 @@ elif pagina == "Planear sesión":
 
     fila_semana = (
         df_distribucion[
-            df_distribucion["Semana"]
-            == semana
+            df_distribucion[
+                "Semana"
+            ]
+            ==
+            semana
         ]
     )
 
@@ -2008,21 +2358,24 @@ elif pagina == "Planear sesión":
 
     if (
         fila_semana.empty
-        or columna_sesion
-        not in df_distribucion.columns
+        or
+        columna_sesion
+        not in
+        df_distribucion.columns
     ):
-
         st.error(
             "No se encontró la sesión programada."
         )
 
         st.stop()
 
-    tipo_sesion = limpiar_texto(
-        fila_semana
-        .iloc[0][
-            columna_sesion
-        ]
+    tipo_sesion = (
+        limpiar_texto(
+            fila_semana
+            .iloc[0][
+                columna_sesion
+            ]
+        )
     )
 
     st.info(
@@ -2037,14 +2390,17 @@ elif pagina == "Planear sesión":
         tipo_sesion
     )
 
-    df_lista = leer_hoja(
-        HOJAS_EJERCICIOS[
-            bloque
-        ]
+    df_lista = (
+        leer_hoja(
+            HOJAS_EJERCICIOS[
+                bloque
+            ]
+        )
     )
 
     primera_columna = (
-        df_lista.columns[0]
+        df_lista
+        .columns[0]
     )
 
     coincidencia = (
@@ -2063,44 +2419,60 @@ elif pagina == "Planear sesión":
     ejercicios = []
 
     if not coincidencia.empty:
-
         indice = (
-            coincidencia.index[0]
+            coincidencia
+            .index[0]
         )
 
         fila = (
-            df_lista.loc[indice]
+            df_lista
+            .loc[
+                indice
+            ]
         )
 
         for columna in (
-            df_lista.columns[1:6]
+            df_lista
+            .columns[
+                1:6
+            ]
         ):
-
-            nombre = limpiar_texto(
-                fila[columna]
+            nombre = (
+                limpiar_texto(
+                    fila[
+                        columna
+                    ]
+                )
             )
 
             if (
                 nombre
-                and not nombre
+                and
+                not
+                nombre
                 .lower()
                 .startswith(
                     "opción"
                 )
             ):
-
                 ejercicios.append(
                     nombre
                 )
 
     if not ejercicios:
-
         for i in range(
-            len(df_lista)
+            len(
+                df_lista
+            )
         ):
-
-            valor = limpiar_texto(
-                df_lista.iloc[i, 0]
+            valor = (
+                limpiar_texto(
+                    df_lista
+                    .iloc[
+                        i,
+                        0
+                    ]
+                )
             )
 
             if (
@@ -2108,31 +2480,33 @@ elif pagina == "Planear sesión":
                 ==
                 tipo_sesion.lower()
             ):
-
                 if (
                     i + 1
                     <
-                    len(df_lista)
+                    len(
+                        df_lista
+                    )
                 ):
-
                     fila_siguiente = (
-                        df_lista.iloc[
+                        df_lista
+                        .iloc[
                             i + 1
                         ]
                     )
 
                     for valor_ejercicio in (
-                        fila_siguiente.iloc[
+                        fila_siguiente
+                        .iloc[
                             1:6
                         ]
                     ):
-
-                        ejercicio = limpiar_texto(
-                            valor_ejercicio
+                        ejercicio = (
+                            limpiar_texto(
+                                valor_ejercicio
+                            )
                         )
 
                         if ejercicio:
-
                             ejercicios.append(
                                 ejercicio
                             )
@@ -2140,10 +2514,8 @@ elif pagina == "Planear sesión":
                 break
 
     if not ejercicios:
-
         st.error(
-            "No se encontraron ejercicios "
-            f"para {tipo_sesion}."
+            f"No se encontraron ejercicios para {tipo_sesion}."
         )
 
         st.stop()
@@ -2154,38 +2526,46 @@ elif pagina == "Planear sesión":
         "Ejercicios"
     )
 
-    cantidad = st.slider(
-        "Cantidad de ejercicios",
-        min_value=1,
-        max_value=min(
-            5,
-            len(ejercicios)
-        ),
-        value=min(
-            3,
-            len(ejercicios)
+    cantidad = (
+        st.slider(
+            "Cantidad de ejercicios",
+            min_value=1,
+            max_value=min(
+                5,
+                len(
+                    ejercicios
+                )
+            ),
+            value=min(
+                3,
+                len(
+                    ejercicios
+                )
+            )
         )
     )
 
-    modo = st.radio(
-        "Modo de selección",
-        [
-            "Manual",
-            "Aleatorio"
-        ],
-        horizontal=True
+    modo = (
+        st.radio(
+            "Modo de selección",
+            [
+                "Manual",
+                "Aleatorio"
+            ],
+            horizontal=True
+        )
     )
 
     if modo == "Manual":
-
-        seleccion = st.multiselect(
-            "Selecciona los ejercicios",
-            ejercicios,
-            max_selections=cantidad
+        seleccion = (
+            st.multiselect(
+                "Selecciona los ejercicios",
+                ejercicios,
+                max_selections=cantidad
+            )
         )
 
     else:
-
         clave = (
             f"aleatorio_"
             f"{bloque}_"
@@ -2199,12 +2579,13 @@ elif pagina == "Planear sesión":
             "Generar selección",
             use_container_width=True
         ):
-
             st.session_state[
                 clave
-            ] = random.sample(
-                ejercicios,
-                cantidad
+            ] = (
+                random.sample(
+                    ejercicios,
+                    cantidad
+                )
             )
 
         seleccion = (
@@ -2215,13 +2596,14 @@ elif pagina == "Planear sesión":
         )
 
     if seleccion:
-
         st.divider()
 
-        df_carga = leer_hoja(
-            HOJAS_CARGA[
-                bloque
-            ]
+        df_carga = (
+            leer_hoja(
+                HOJAS_CARGA[
+                    bloque
+                ]
+            )
         )
 
         columnas_numericas = [
@@ -2229,20 +2611,20 @@ elif pagina == "Planear sesión":
             "Movimientos",
             "Vueltas",
             "RPE objetivo",
-            "Descanso min"
+            "Descanso min",
         ]
 
         for columna in columnas_numericas:
-
             if columna in df_carga.columns:
-
                 df_carga[
                     columna
-                ] = pd.to_numeric(
-                    df_carga[
-                        columna
-                    ],
-                    errors="coerce"
+                ] = (
+                    pd.to_numeric(
+                        df_carga[
+                            columna
+                        ],
+                        errors="coerce"
+                    )
                 )
 
         df_carga[
@@ -2264,7 +2646,6 @@ elif pagina == "Planear sesión":
         filas_plan = []
 
         for ejercicio in seleccion:
-
             coincidencia_carga = (
                 df_carga[
                     df_carga[
@@ -2287,7 +2668,6 @@ elif pagina == "Planear sesión":
             )
 
             filas_plan.append({
-
                 "Ejercicio":
                     ejercicio,
 
@@ -2319,15 +2699,16 @@ elif pagina == "Planear sesión":
                 "Volumen":
                     fila[
                         "Volumen"
-                    ]
+                    ],
             })
 
-        df_plan = pd.DataFrame(
-            filas_plan
+        df_plan = (
+            pd.DataFrame(
+                filas_plan
+            )
         )
 
         if df_plan.empty:
-
             st.warning(
                 "No se encontraron datos de carga."
             )
@@ -2367,7 +2748,6 @@ elif pagina == "Planear sesión":
         if pd.isna(
             rpe_medio
         ):
-
             rpe_medio = 0
 
         carga_planificada = (
@@ -2376,7 +2756,11 @@ elif pagina == "Planear sesión":
             rpe_medio
         )
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3 = (
+            st.columns(
+                3
+            )
+        )
 
         col1.metric(
             "Volumen planificado",
@@ -2404,73 +2788,61 @@ elif pagina == "Planear sesión":
             "Acondicionamiento físico"
         )
 
-        agregar_fisico = st.toggle(
-            "Agregar acondicionamiento físico a esta sesión",
-            value=False,
-            key=f"agregar_fisico_{semana}_{sesion}"
+        agregar_fisico = (
+            st.toggle(
+                "Agregar acondicionamiento físico a esta sesión",
+                value=False,
+                key=f"agregar_fisico_{semana}_{sesion}"
+            )
         )
 
-
-        # Estructura por defecto
         acondicionamiento = {
             "Activo": False,
             "Tipo": None,
             "Momento": None,
-            "Ejercicios": []
+            "Ejercicios": [],
         }
-
 
         if agregar_fisico:
 
             st.caption(
-                "El acondicionamiento formará parte "
-                "de esta misma sesión de escalada."
+                "El acondicionamiento formará parte de esta misma sesión de escalada."
             )
 
-
-            # =================================================
-            # TIPO DE ACONDICIONAMIENTO
-            # =================================================
-
-            tipos_fisico = sorted(
-                df_ejercicios_fisico[
-                    "Tipo"
-                ]
-                .dropna()
-                .astype(str)
-                .str.strip()
-                .unique()
-                .tolist()
+            tipos_fisico = (
+                sorted(
+                    df_ejercicios_fisico[
+                        "Tipo"
+                    ]
+                    .dropna()
+                    .astype(str)
+                    .str.strip()
+                    .unique()
+                    .tolist()
+                )
             )
 
-
-            tipo_fisico = st.selectbox(
-                "Tipo de acondicionamiento",
-                tipos_fisico,
-                index=None,
-                placeholder="Selecciona el tipo...",
-                key=f"tipo_fisico_{semana}_{sesion}"
+            tipo_fisico = (
+                st.selectbox(
+                    "Tipo de acondicionamiento",
+                    tipos_fisico,
+                    index=None,
+                    placeholder="Selecciona el tipo...",
+                    key=f"tipo_fisico_{semana}_{sesion}"
+                )
             )
 
-
-            # =================================================
-            # MOMENTO
-            # =================================================
-
-            momento_fisico = st.radio(
-                "Momento",
-                [
-                    "Antes de escalar",
-                    "Después de escalar"
-                ],
-                horizontal=True,
-                key=f"momento_fisico_{semana}_{sesion}"
+            momento_fisico = (
+                st.radio(
+                    "Momento",
+                    [
+                        "Antes de escalar",
+                        "Después de escalar"
+                    ],
+                    horizontal=True,
+                    key=f"momento_fisico_{semana}_{sesion}"
+                )
             )
-
-
-            # =================================================
-            # EJERCICIOS
-            # =================================================
 
             if tipo_fisico is not None:
 
@@ -2487,79 +2859,73 @@ elif pagina == "Planear sesión":
                     .copy()
                 )
 
-
-                opciones_ejercicios = sorted(
-                    df_tipo_fisico[
-                        "Ejercicio"
-                    ]
-                    .dropna()
-                    .astype(str)
-                    .str.strip()
-                    .unique()
-                    .tolist()
+                opciones_ejercicios = (
+                    sorted(
+                        df_tipo_fisico[
+                            "Ejercicio"
+                        ]
+                        .dropna()
+                        .astype(str)
+                        .str.strip()
+                        .unique()
+                        .tolist()
+                    )
                 )
 
-
-                numero_ejercicios_fisico = st.number_input(
-                    "Número de ejercicios",
-                    min_value=1,
-                    max_value=10,
-                    value=3,
-                    step=1,
-                    key=f"numero_fisico_{semana}_{sesion}"
+                numero_ejercicios_fisico = (
+                    st.number_input(
+                        "Número de ejercicios",
+                        min_value=1,
+                        max_value=10,
+                        value=3,
+                        step=1,
+                        key=f"numero_fisico_{semana}_{sesion}"
+                    )
                 )
-
 
                 ejercicios_fisicos = []
 
                 ejercicios_utilizados = set()
 
-
-                # =================================================
-                # CREAR EJERCICIOS
-                # =================================================
-
                 for i in range(
-                    int(numero_ejercicios_fisico)
+                    int(
+                        numero_ejercicios_fisico
+                    )
                 ):
 
                     with st.expander(
                         f"Ejercicio {i + 1}",
                         expanded=True
                     ):
-
-                        ejercicio_fisico = st.selectbox(
-                            "Ejercicio",
-                            opciones_ejercicios,
-                            index=None,
-                            placeholder="Selecciona ejercicio...",
-                            key=(
-                                f"ejercicio_fisico_"
-                                f"{semana}_{sesion}_{i}"
+                        ejercicio_fisico = (
+                            st.selectbox(
+                                "Ejercicio",
+                                opciones_ejercicios,
+                                index=None,
+                                placeholder="Selecciona ejercicio...",
+                                key=(
+                                    f"ejercicio_fisico_"
+                                    f"{semana}_{sesion}_{i}"
+                                )
                             )
                         )
 
-
                         if ejercicio_fisico is not None:
 
-                            # Evitar duplicados
-                            if ejercicio_fisico in ejercicios_utilizados:
-
+                            if (
+                                ejercicio_fisico
+                                in
+                                ejercicios_utilizados
+                            ):
                                 st.warning(
                                     "Este ejercicio ya fue seleccionado."
                                 )
 
                                 continue
 
-
                             ejercicios_utilizados.add(
                                 ejercicio_fisico
                             )
-
-
-                            # =====================================
-                            # DATOS DEL EJERCICIO
-                            # =====================================
 
                             fila_ejercicio = (
                                 df_tipo_fisico[
@@ -2574,24 +2940,28 @@ elif pagina == "Planear sesión":
                                 .iloc[0]
                             )
 
-
-                            equipo = limpiar_texto(
-                                fila_ejercicio.get(
-                                    "Equipo",
-                                    ""
+                            equipo = (
+                                limpiar_texto(
+                                    fila_ejercicio.get(
+                                        "Equipo",
+                                        ""
+                                    )
                                 )
                             )
 
-                            zona_principal = limpiar_texto(
-                                fila_ejercicio.get(
-                                    "Zona principal",
-                                    ""
+                            zona_principal = (
+                                limpiar_texto(
+                                    fila_ejercicio.get(
+                                        "Zona principal",
+                                        ""
+                                    )
                                 )
                             )
-
 
                             col_info1, col_info2 = (
-                                st.columns(2)
+                                st.columns(
+                                    2
+                                )
                             )
 
                             col_info1.caption(
@@ -2604,44 +2974,48 @@ elif pagina == "Planear sesión":
                                 f"{zona_principal if zona_principal else '—'}"
                             )
 
-
-                            # =====================================
-                            # PRESCRIPCIÓN
-                            # =====================================
-
-                            col1, col2 = st.columns(2)
-
-                            series = col1.number_input(
-                                "Series",
-                                min_value=1,
-                                max_value=20,
-                                value=3,
-                                step=1,
-                                key=(
-                                    f"series_fisico_"
-                                    f"{semana}_{sesion}_{i}"
+                            col1_f, col2_f = (
+                                st.columns(
+                                    2
                                 )
                             )
 
-                            repeticiones = col2.number_input(
-                                "Repeticiones",
-                                min_value=1,
-                                max_value=100,
-                                value=8,
-                                step=1,
-                                key=(
-                                    f"reps_fisico_"
-                                    f"{semana}_{sesion}_{i}"
+                            series = (
+                                col1_f.number_input(
+                                    "Series",
+                                    min_value=1,
+                                    max_value=20,
+                                    value=3,
+                                    step=1,
+                                    key=(
+                                        f"series_fisico_"
+                                        f"{semana}_{sesion}_{i}"
+                                    )
                                 )
                             )
 
+                            repeticiones = (
+                                col2_f.number_input(
+                                    "Repeticiones",
+                                    min_value=1,
+                                    max_value=100,
+                                    value=8,
+                                    step=1,
+                                    key=(
+                                        f"reps_fisico_"
+                                        f"{semana}_{sesion}_{i}"
+                                    )
+                                )
+                            )
 
-                            col3_fisico, col4_fisico = (
-                                st.columns(2)
+                            col3_f, col4_f = (
+                                st.columns(
+                                    2
+                                )
                             )
 
                             carga_externa = (
-                                col3_fisico.number_input(
+                                col3_f.number_input(
                                     "Carga externa (kg)",
                                     min_value=0.0,
                                     value=0.0,
@@ -2654,7 +3028,7 @@ elif pagina == "Planear sesión":
                             )
 
                             rpe_objetivo = (
-                                col4_fisico.number_input(
+                                col4_f.number_input(
                                     "RPE objetivo",
                                     min_value=1.0,
                                     max_value=10.0,
@@ -2667,217 +3041,103 @@ elif pagina == "Planear sesión":
                                 )
                             )
 
+                            ejercicios_fisicos.append({
+                                "Ejercicio":
+                                    ejercicio_fisico,
 
-                            # =====================================
-                            # GUARDAR EJERCICIO
-                            # =====================================
+                                "Tipo":
+                                    tipo_fisico,
 
-                            ejercicios_fisicos.append(
-                                {
-                                    "Ejercicio":
-                                        ejercicio_fisico,
+                                "Equipo":
+                                    equipo,
 
-                                    "Tipo":
-                                        tipo_fisico,
+                                "Zona principal":
+                                    zona_principal,
 
-                                    "Equipo":
-                                        equipo,
+                                "Series":
+                                    int(
+                                        series
+                                    ),
 
-                                    "Zona principal":
-                                        zona_principal,
+                                "Repeticiones":
+                                    int(
+                                        repeticiones
+                                    ),
 
-                                    "Series":
-                                        int(series),
+                                "Carga externa":
+                                    float(
+                                        carga_externa
+                                    ),
 
-                                    "Repeticiones":
-                                        int(repeticiones),
+                                "RPE objetivo":
+                                    float(
+                                        rpe_objetivo
+                                    ),
+                            })
 
-                                    "Carga externa":
-                                        float(carga_externa),
 
-                                    "RPE objetivo":
-                                        float(rpe_objetivo)
-                                }
-                            )
                 # =================================================
-                # PASO 3A — CALCULAR CARGA FÍSICA
+                # PASO 3A — CARGA FÍSICA
                 # =================================================
 
-                resultado_carga_fisica = calcular_carga_fisica(
-                    ejercicios_fisicos,
-                    momento_fisico,
-                    df_ejercicios_fisico,
-                    df_reglas_fisico
+                resultado_carga_fisica = (
+                    calcular_carga_fisica(
+                        ejercicios_fisicos,
+                        momento_fisico,
+                        df_ejercicios_fisico,
+                        df_reglas_fisico
+                    )
                 )
+
                 carga_por_zona = (
                     resultado_carga_fisica[
                         "Resultados"
                     ]
                 )
 
+
                 # =================================================
-                # GUARDAR ACONDICIONAMIENTO
+                # PASO 3C-2 — COMPATIBILIDAD
+                # Se calcula y guarda; todavía no se muestra
                 # =================================================
+
+                compatibilidad = (
+                    calcular_compatibilidad(
+                        tipo_sesion,
+                        carga_por_zona,
+                        momento_fisico
+                    )
+                )
+
 
                 acondicionamiento = {
-                    "Activo": True,
-                    "Tipo": tipo_fisico,
-                    "Momento": momento_fisico,
-                    "Factor momento":
-                        resultado_carga_fisica["Factor"],
-                    "Ejercicios":
-                        ejercicios_fisicos,
-                    "Carga por zona":
-                        resultado_carga_fisica["Resultados"]
-                }
+                    "Activo":
+                        True,
 
-                # =================================================
-                # GUARDAR ACONDICIONAMIENTO
-                # =================================================
+                    "Tipo":
+                        tipo_fisico,
 
-                acondicionamiento = {
-                    "Activo": True,
-                    "Tipo": tipo_fisico,
-                    "Momento": momento_fisico,
+                    "Momento":
+                        momento_fisico,
+
                     "Factor momento":
                         resultado_carga_fisica[
                             "Factor"
                         ],
+
                     "Ejercicios":
                         ejercicios_fisicos,
+
                     "Carga por zona":
-                        carga_por_zona
+                        carga_por_zona,
+
+                    "Compatibilidad":
+                        compatibilidad,
                 }
-                # =================================================
-                # PASO 3B — MOSTRAR CARGA POR ZONA
-                # =================================================
-
-                st.markdown(
-                    "### Carga física por zona"
-                )
-
-                filas_carga = []
-
-                for zona, datos in carga_por_zona.items():
-
-                    filas_carga.append(
-                        {
-                            "Zona": zona,
-                            "Carga": round(
-                                datos["Carga"],
-                                1
-                            ),
-                            "Nivel": datos["Nivel"]
-                        }
-                    )
-
-
-                df_carga_fisica_visual = pd.DataFrame(
-                    filas_carga
-                )
-
-
-                st.dataframe(
-                    df_carga_fisica_visual,
-                    use_container_width=True,
-                    hide_index=True
-                )
 
 
                 # =================================================
-                # RESUMEN DE NIVELES
-                # =================================================
-
-                niveles_altos = sum(
-                    1
-                    for datos
-                    in carga_por_zona.values()
-                    if datos["Nivel"] == "ALTA"
-                )
-
-                niveles_medios = sum(
-                    1
-                    for datos
-                    in carga_por_zona.values()
-                    if datos["Nivel"] == "MEDIA"
-                )
-
-                niveles_bajos = sum(
-                    1
-                    for datos
-                    in carga_por_zona.values()
-                    if datos["Nivel"] == "BAJA"
-                )
-
-
-                col_n1, col_n2, col_n3 = st.columns(3)
-
-                col_n1.metric(
-                    "Zonas ALTA",
-                    niveles_altos
-                )
-
-                col_n2.metric(
-                    "Zonas MEDIA",
-                    niveles_medios
-                )
-
-                col_n3.metric(
-                    "Zonas BAJA",
-                    niveles_bajos
-                )
-
-
-                # =================================================
-                # RECOMENDACIONES
-                # =================================================
-
-                st.markdown(
-                    "### Recomendaciones para la escalada"
-                )
-
-                hay_alertas = False
-
-
-                for zona, datos in carga_por_zona.items():
-
-                    nivel = datos["Nivel"]
-
-                    recomendacion = datos[
-                        "Recomendación"
-                    ]
-
-
-                    if nivel == "ALTA":
-
-                        hay_alertas = True
-
-                        st.error(
-                            f"🔴 {zona} · ALTA\n\n"
-                            f"{recomendacion}"
-                        )
-
-
-                    elif nivel == "MEDIA":
-
-                        hay_alertas = True
-
-                        st.warning(
-                            f"🟠 {zona} · MEDIA\n\n"
-                            f"{recomendacion}"
-                        )
-
-
-                if not hay_alertas:
-
-                    st.success(
-                        "✅ Todas las zonas están en carga BAJA. "
-                        "No hay restricciones específicas "
-                        "para la sesión de escalada."
-                    )
-
-                # =================================================
-                # RESUMEN
+                # MOSTRAR SOLO UNA VEZ
                 # =================================================
 
                 if ejercicios_fisicos:
@@ -2889,33 +3149,30 @@ elif pagina == "Planear sesión":
                     )
 
                     col_f1, col_f2 = (
-                        st.columns(2)
+                        st.columns(
+                            2
+                        )
                     )
 
                     col_f1.write(
-                        f"**Tipo:** {tipo_fisico}"
+                        f"**Tipo:** "
+                        f"{tipo_fisico}"
                     )
 
                     col_f2.write(
-                        f"**Momento:** {momento_fisico}"
+                        f"**Momento:** "
+                        f"{momento_fisico}"
                     )
-
 
                     st.caption(
                         "Factor aplicado: "
                         f"{resultado_carga_fisica['Factor']:.1f}"
                     )
 
-
-                    # ---------------------------------------------
-                    # EJERCICIOS
-                    # ---------------------------------------------
-
                     for numero, ejercicio in enumerate(
                         ejercicios_fisicos,
                         start=1
                     ):
-
                         st.write(
                             f"**{numero}. "
                             f"{ejercicio['Ejercicio']}** — "
@@ -2925,40 +3182,32 @@ elif pagina == "Planear sesión":
                             f"RPE {ejercicio['RPE objetivo']:.1f}"
                         )
 
-
-                    # =================================================
-                    # CARGA POR ZONA
-                    # =================================================
-
                     st.markdown(
                         "### Carga física por zona"
                     )
 
-
                     filas_carga = []
-
 
                     for zona, datos in (
                         carga_por_zona.items()
                     ):
+                        filas_carga.append({
+                            "Zona":
+                                zona,
 
-                        filas_carga.append(
-                            {
-                                "Zona": zona,
-                                "Carga":
-                                    round(
-                                        datos[
-                                            "Carga"
-                                        ],
-                                        1
-                                    ),
-                                "Nivel":
+                            "Carga":
+                                round(
                                     datos[
-                                        "Nivel"
-                                    ]
-                            }
-                        )
+                                        "Carga"
+                                    ],
+                                    1
+                                ),
 
+                            "Nivel":
+                                datos[
+                                    "Nivel"
+                                ],
+                        })
 
                     df_carga_fisica_visual = (
                         pd.DataFrame(
@@ -2966,41 +3215,85 @@ elif pagina == "Planear sesión":
                         )
                     )
 
-
                     st.dataframe(
                         df_carga_fisica_visual,
                         use_container_width=True,
                         hide_index=True
                     )
 
+                    niveles_altos = sum(
+                        1
+                        for datos in (
+                            carga_por_zona.values()
+                        )
+                        if datos[
+                            "Nivel"
+                        ] == "ALTA"
+                    )
 
-                    # =================================================
-                    # RECOMENDACIONES
-                    # =================================================
+                    niveles_medios = sum(
+                        1
+                        for datos in (
+                            carga_por_zona.values()
+                        )
+                        if datos[
+                            "Nivel"
+                        ] == "MEDIA"
+                    )
+
+                    niveles_bajos = sum(
+                        1
+                        for datos in (
+                            carga_por_zona.values()
+                        )
+                        if datos[
+                            "Nivel"
+                        ] == "BAJA"
+                    )
+
+                    col_n1, col_n2, col_n3 = (
+                        st.columns(
+                            3
+                        )
+                    )
+
+                    col_n1.metric(
+                        "Zonas ALTA",
+                        niveles_altos
+                    )
+
+                    col_n2.metric(
+                        "Zonas MEDIA",
+                        niveles_medios
+                    )
+
+                    col_n3.metric(
+                        "Zonas BAJA",
+                        niveles_bajos
+                    )
 
                     st.markdown(
                         "### Recomendaciones para la escalada"
                     )
 
-
                     hay_alertas = False
-
 
                     for zona, datos in (
                         carga_por_zona.items()
                     ):
+                        nivel = (
+                            datos[
+                                "Nivel"
+                            ]
+                        )
 
-                        nivel = datos[
-                            "Nivel"
-                        ]
-
-                        recomendacion = datos[
-                            "Recomendación"
-                        ]
-
+                        recomendacion = (
+                            datos[
+                                "Recomendación"
+                            ]
+                        )
 
                         if nivel == "ALTA":
-
                             hay_alertas = True
 
                             st.error(
@@ -3008,9 +3301,7 @@ elif pagina == "Planear sesión":
                                 f"{recomendacion}"
                             )
 
-
                         elif nivel == "MEDIA":
-
                             hay_alertas = True
 
                             st.warning(
@@ -3018,28 +3309,28 @@ elif pagina == "Planear sesión":
                                 f"{recomendacion}"
                             )
 
-
                     if not hay_alertas:
-
                         st.success(
                             "✅ Todas las zonas están en carga BAJA. "
                             "No hay restricciones específicas "
                             "para la sesión de escalada."
                         )
+
+
         # =====================================================
         # GUARDAR SESIÓN COMPLETA
         # =====================================================
 
         if (
-            len(seleccion)
+            len(
+                seleccion
+            )
             ==
             cantidad
         ):
-
             st.session_state[
                 "sesion_planificada"
             ] = {
-
                 "Semana":
                     semana,
 
@@ -3071,29 +3362,28 @@ elif pagina == "Planear sesión":
                     ),
 
                 "Acondicionamiento":
-                    acondicionamiento
+                    acondicionamiento,
             }
 
             st.success(
                 "Sesión lista para registrar."
             )
 
+
 # =========================================================
 # ACONDICIONAMIENTO FÍSICO
 # =========================================================
+
 elif pagina == "Acondicionamiento físico":
 
-    st.title("Acondicionamiento físico")
-
-    # =====================================================
-    # ESTADO DE CONEXIÓN
-    # =====================================================
+    st.title(
+        "Acondicionamiento físico"
+    )
 
     if not BASE_FISICO_CONECTADA:
 
         st.error(
-            "No se pudo conectar con la base de "
-            "acondicionamiento físico."
+            "No se pudo conectar con la base de acondicionamiento físico."
         )
 
         st.code(
@@ -3108,16 +3398,15 @@ elif pagina == "Acondicionamiento físico":
 
     st.write(
         "Ejercicios cargados:",
-        len(df_ejercicios_fisico)
+        len(
+            df_ejercicios_fisico
+        )
     )
 
-
-    # =====================================================
-    # INFORMACIÓN GENERAL
-    # =====================================================
-
-    total_ejercicios = len(
-        df_ejercicios_fisico
+    total_ejercicios = (
+        len(
+            df_ejercicios_fisico
+        )
     )
 
     tipos_ejercicio = (
@@ -3136,31 +3425,26 @@ elif pagina == "Acondicionamiento físico":
         .nunique()
     )
 
-
-    col1, col2, col3 = st.columns(3)
-
+    col1, col2, col3 = (
+        st.columns(
+            3
+        )
+    )
 
     col1.metric(
         "Ejercicios",
         total_ejercicios
     )
 
-
     col2.metric(
         "Tipos",
         tipos_ejercicio
     )
 
-
     col3.metric(
         "Zonas principales",
         zonas_principales
     )
-
-
-    # =====================================================
-    # EXPLORADOR DE EJERCICIOS
-    # =====================================================
 
     st.divider()
 
@@ -3168,30 +3452,29 @@ elif pagina == "Acondicionamiento físico":
         "Base de ejercicios"
     )
 
-
-    tipo_seleccionado = st.selectbox(
-        "Tipo de ejercicio",
-        sorted(
-            df_ejercicios_fisico[
-                "Tipo"
-            ]
-            .dropna()
-            .unique()
-            .tolist()
-        ),
-        index=None,
-        placeholder="Todos los tipos"
+    tipo_seleccionado = (
+        st.selectbox(
+            "Tipo de ejercicio",
+            sorted(
+                df_ejercicios_fisico[
+                    "Tipo"
+                ]
+                .dropna()
+                .unique()
+                .tolist()
+            ),
+            index=None,
+            placeholder="Todos los tipos"
+        )
     )
 
-
     if tipo_seleccionado is None:
-
         ejercicios_mostrar = (
-            df_ejercicios_fisico.copy()
+            df_ejercicios_fisico
+            .copy()
         )
 
     else:
-
         ejercicios_mostrar = (
             df_ejercicios_fisico[
                 df_ejercicios_fisico[
@@ -3203,21 +3486,16 @@ elif pagina == "Acondicionamiento físico":
             .copy()
         )
 
-
-    # =====================================================
-    # BUSCADOR
-    # =====================================================
-
-    buscar_ejercicio = st.text_input(
-        "Buscar ejercicio",
-        placeholder=(
-            "Ej. dominadas, press, core..."
+    buscar_ejercicio = (
+        st.text_input(
+            "Buscar ejercicio",
+            placeholder=(
+                "Ej. dominadas, press, core..."
+            )
         )
     )
 
-
     if buscar_ejercicio:
-
         ejercicios_mostrar = (
             ejercicios_mostrar[
                 ejercicios_mostrar[
@@ -3232,11 +3510,6 @@ elif pagina == "Acondicionamiento físico":
             ]
         )
 
-
-    # =====================================================
-    # TABLA
-    # =====================================================
-
     columnas_mostrar = [
         "ID",
         "Ejercicio",
@@ -3249,9 +3522,8 @@ elif pagina == "Acondicionamiento físico":
         "Empuje (pecho/tríceps)",
         "Hombro",
         "Core",
-        "Piernas / cadera"
+        "Piernas / cadera",
     ]
-
 
     columnas_disponibles = [
         columna
@@ -3259,7 +3531,6 @@ elif pagina == "Acondicionamiento físico":
         if columna
         in ejercicios_mostrar.columns
     ]
-
 
     st.dataframe(
         ejercicios_mostrar[
@@ -3269,11 +3540,13 @@ elif pagina == "Acondicionamiento físico":
         hide_index=True
     )
 
-
     st.caption(
-        f"Mostrando {len(ejercicios_mostrar)} "
+        f"Mostrando "
+        f"{len(ejercicios_mostrar)} "
         f"de {total_ejercicios} ejercicios."
     )
+
+
 # =========================================================
 # REGISTRAR SESIÓN
 # =========================================================
@@ -3284,15 +3557,15 @@ elif pagina == "Registrar sesión":
         "Registrar sesión"
     )
 
-    plan = st.session_state.get(
-        "sesion_planificada"
+    plan = (
+        st.session_state.get(
+            "sesion_planificada"
+        )
     )
 
     if not plan:
-
         st.warning(
-            "Primero crea una sesión "
-            "en 'Planear sesión'."
+            "Primero crea una sesión en 'Planear sesión'."
         )
 
         st.stop()
@@ -3303,7 +3576,11 @@ elif pagina == "Registrar sesión":
         f"{plan['Tipo']}"
     )
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3 = (
+        st.columns(
+            3
+        )
+    )
 
     col1.metric(
         "Volumen planificado",
@@ -3320,10 +3597,12 @@ elif pagina == "Registrar sesión":
         f"{plan['Carga']:.0f}"
     )
 
-    presentes = st.multiselect(
-        "Alumnos presentes",
-        alumnos,
-        default=[]
+    presentes = (
+        st.multiselect(
+            "Alumnos presentes",
+            alumnos,
+            default=[]
+        )
     )
 
     st.divider()
@@ -3336,10 +3615,13 @@ elif pagina == "Registrar sesión":
             alumno
         )
 
-        col1, col2 = st.columns(2)
+        col1, col2 = (
+            st.columns(
+                2
+            )
+        )
 
         with col1:
-
             volumen_real = (
                 st.number_input(
                     "Volumen real",
@@ -3355,7 +3637,6 @@ elif pagina == "Registrar sesión":
             )
 
         with col2:
-
             rpe_inicial = max(
                 1,
                 min(
@@ -3392,7 +3673,6 @@ elif pagina == "Registrar sesión":
         )
 
         resultados.append({
-
             "Alumno":
                 alumno,
 
@@ -3430,7 +3710,7 @@ elif pagina == "Registrar sesión":
             "Carga real":
                 float(
                     carga_real
-                )
+                ),
         })
 
     if st.button(
@@ -3440,13 +3720,11 @@ elif pagina == "Registrar sesión":
     ):
 
         if not resultados:
-
             st.warning(
                 "Selecciona al menos un alumno."
             )
 
         else:
-
             guardados = 0
             actualizados = 0
             errores = []
@@ -3454,68 +3732,51 @@ elif pagina == "Registrar sesión":
             with st.spinner(
                 "Guardando sesión..."
             ):
-
                 for resultado in resultados:
 
                     try:
-
-                        accion = guardar_historial(
-
-                            plan[
-                                "Semana"
-                            ],
-
-                            plan[
-                                "Sesión"
-                            ],
-
-                            resultado[
-                                "Alumno"
-                            ],
-
-                            plan[
-                                "Tipo"
-                            ],
-
-                            resultado[
-                                "Volumen planificado"
-                            ],
-
-                            resultado[
-                                "Volumen real"
-                            ],
-
-                            resultado[
-                                "RPE planificado"
-                            ],
-
-                            resultado[
-                                "RPE real"
-                            ],
-
-                            resultado[
-                                "Carga planificada"
-                            ],
-
-                            resultado[
-                                "Carga real"
-                            ]
+                        accion = (
+                            guardar_historial(
+                                plan[
+                                    "Semana"
+                                ],
+                                plan[
+                                    "Sesión"
+                                ],
+                                resultado[
+                                    "Alumno"
+                                ],
+                                plan[
+                                    "Tipo"
+                                ],
+                                resultado[
+                                    "Volumen planificado"
+                                ],
+                                resultado[
+                                    "Volumen real"
+                                ],
+                                resultado[
+                                    "RPE planificado"
+                                ],
+                                resultado[
+                                    "RPE real"
+                                ],
+                                resultado[
+                                    "Carga planificada"
+                                ],
+                                resultado[
+                                    "Carga real"
+                                ],
+                            )
                         )
 
-                        if (
-                            accion
-                            ==
-                            "creado"
-                        ):
-
+                        if accion == "creado":
                             guardados += 1
 
                         else:
-
                             actualizados += 1
 
                     except Exception as error:
-
                         errores.append(
                             f"{resultado['Alumno']}: "
                             f"{str(error)}"
@@ -3524,7 +3785,6 @@ elif pagina == "Registrar sesión":
                 if not errores:
 
                     try:
-
                         actualizar_seguimiento_bloque(
                             plan[
                                 "Bloque"
@@ -3532,28 +3792,22 @@ elif pagina == "Registrar sesión":
                         )
 
                     except Exception as error:
-
                         errores.append(
                             "Seguimiento por bloque: "
                             f"{str(error)}"
                         )
 
             if guardados:
-
                 st.success(
-                    f"✅ {guardados} registro(s) "
-                    f"nuevos guardados."
+                    f"✅ {guardados} registro(s) nuevos guardados."
                 )
 
             if actualizados:
-
                 st.info(
-                    f"🔄 {actualizados} registro(s) "
-                    f"actualizados."
+                    f"🔄 {actualizados} registro(s) actualizados."
                 )
 
             if not errores:
-
                 st.success(
                     "✅ Historial semanal actualizado."
                 )
@@ -3567,13 +3821,11 @@ elif pagina == "Registrar sesión":
                 st.balloons()
 
             else:
-
                 st.error(
                     "Hubo problemas al guardar:"
                 )
 
                 for error in errores:
-
                     st.write(
                         f"• {error}"
                     )
@@ -3594,12 +3846,10 @@ elif pagina == "Seguimiento":
         "y analiza la evolución semanal del atleta."
     )
 
-    # =====================================================
-    # LEER HISTORIAL
-    # =====================================================
-
-    df_historial = leer_hoja(
-        "Historial semanal"
+    df_historial = (
+        leer_hoja(
+            "Historial semanal"
+        )
     )
 
     columnas_numericas = [
@@ -3610,31 +3860,37 @@ elif pagina == "Seguimiento":
         "RPE planificado",
         "RPE real",
         "Carga planificada",
-        "Carga real"
+        "Carga real",
     ]
 
     for columna in columnas_numericas:
-
         if columna in df_historial.columns:
-
-            df_historial[columna] = pd.to_numeric(
-                df_historial[columna],
-                errors="coerce"
+            df_historial[
+                columna
+            ] = (
+                pd.to_numeric(
+                    df_historial[
+                        columna
+                    ],
+                    errors="coerce"
+                )
             )
 
-    # =====================================================
-    # SELECCIÓN DE BLOQUE
-    # =====================================================
-
-    bloque_analisis = st.selectbox(
-        "Bloque",
-        [1, 2, 3, 4],
-        index=None,
-        placeholder="Selecciona un bloque..."
+    bloque_analisis = (
+        st.selectbox(
+            "Bloque",
+            [
+                1,
+                2,
+                3,
+                4
+            ],
+            index=None,
+            placeholder="Selecciona un bloque..."
+        )
     )
 
     if bloque_analisis is None:
-
         st.info(
             "Selecciona un bloque para consultar el seguimiento."
         )
@@ -3645,65 +3901,65 @@ elif pagina == "Seguimiento":
         1: (1, 13),
         2: (14, 26),
         3: (27, 39),
-        4: (40, 52)
+        4: (40, 52),
     }
 
-    inicio, fin = rangos[
-        bloque_analisis
-    ]
+    inicio, fin = (
+        rangos[
+            bloque_analisis
+        ]
+    )
 
     df_bloque = (
         df_historial[
             (
-                df_historial["Semana"]
-                >= inicio
+                df_historial[
+                    "Semana"
+                ]
+                >=
+                inicio
             )
             &
             (
-                df_historial["Semana"]
-                <= fin
+                df_historial[
+                    "Semana"
+                ]
+                <=
+                fin
             )
         ]
         .copy()
     )
 
     if df_bloque.empty:
-
         st.info(
             "No hay datos para este bloque."
         )
 
         st.stop()
 
-    # =====================================================
-    # SELECCIÓN DE ALUMNO
-    # =====================================================
-
-    alumno = st.selectbox(
-        "Alumno",
-        sorted(
-            df_bloque[
-                "Alumno"
-            ]
-            .dropna()
-            .astype(str)
-            .unique()
-        ),
-        index=None,
-        placeholder="Selecciona un alumno..."
+    alumno = (
+        st.selectbox(
+            "Alumno",
+            sorted(
+                df_bloque[
+                    "Alumno"
+                ]
+                .dropna()
+                .astype(str)
+                .unique()
+            ),
+            index=None,
+            placeholder="Selecciona un alumno..."
+        )
     )
 
     if alumno is None:
-
         st.info(
             "Selecciona un alumno para ver su seguimiento."
         )
 
         st.stop()
-
-    # =====================================================
-    # FILTRAR ALUMNO
-    # =====================================================
 
     df_alumno = (
         df_bloque[
@@ -3717,10 +3973,6 @@ elif pagina == "Seguimiento":
         .copy()
     )
 
-    # =====================================================
-    # RESUMEN SEMANAL
-    # =====================================================
-
     resumen = (
         df_alumno
         .groupby(
@@ -3728,47 +3980,68 @@ elif pagina == "Seguimiento":
             as_index=False
         )
         .agg({
-            "Volumen planificado": "sum",
-            "Volumen real": "sum",
-            "RPE planificado": "mean",
-            "RPE real": "mean",
-            "Carga planificada": "sum",
-            "Carga real": "sum"
+            "Volumen planificado":
+                "sum",
+
+            "Volumen real":
+                "sum",
+
+            "RPE planificado":
+                "mean",
+
+            "RPE real":
+                "mean",
+
+            "Carga planificada":
+                "sum",
+
+            "Carga real":
+                "sum",
         })
         .sort_values(
             "Semana"
         )
     )
 
-    # =====================================================
-    # MÉTRICAS DERIVADAS
-    # =====================================================
-
-    resumen["Volumen %"] = (
-        resumen["Volumen real"]
+    resumen[
+        "Volumen %"
+    ] = (
+        resumen[
+            "Volumen real"
+        ]
         /
-        resumen["Volumen planificado"]
+        resumen[
+            "Volumen planificado"
+        ]
         *
         100
     )
 
-    resumen["Carga %"] = (
-        resumen["Carga real"]
+    resumen[
+        "Carga %"
+    ] = (
+        resumen[
+            "Carga real"
+        ]
         /
-        resumen["Carga planificada"]
+        resumen[
+            "Carga planificada"
+        ]
         *
         100
     )
 
-    resumen["Dif. RPE"] = (
-        resumen["RPE real"]
+    resumen[
+        "Dif. RPE"
+    ] = (
+        resumen[
+            "RPE real"
+        ]
         -
-        resumen["RPE planificado"]
+        resumen[
+            "RPE planificado"
+        ]
     )
-
-    # =====================================================
-    # MÉTRICAS DEL BLOQUE
-    # =====================================================
 
     volumen_plan_total = (
         resumen[
@@ -3798,33 +4071,25 @@ elif pagina == "Seguimiento":
         .sum()
     )
 
-    if volumen_plan_total > 0:
+    volumen_pct_total = (
+        volumen_real_total
+        /
+        volumen_plan_total
+        *
+        100
+        if volumen_plan_total > 0
+        else 0
+    )
 
-        volumen_pct_total = (
-            volumen_real_total
-            /
-            volumen_plan_total
-            *
-            100
-        )
-
-    else:
-
-        volumen_pct_total = 0
-
-    if carga_plan_total > 0:
-
-        carga_pct_total = (
-            carga_real_total
-            /
-            carga_plan_total
-            *
-            100
-        )
-
-    else:
-
-        carga_pct_total = 0
+    carga_pct_total = (
+        carga_real_total
+        /
+        carga_plan_total
+        *
+        100
+        if carga_plan_total > 0
+        else 0
+    )
 
     rpe_plan_total = (
         resumen[
@@ -3857,10 +4122,6 @@ elif pagina == "Seguimiento":
         .iloc[-1]
     )
 
-    # =====================================================
-    # ENCABEZADO
-    # =====================================================
-
     st.divider()
 
     st.subheader(
@@ -3873,66 +4134,52 @@ elif pagina == "Seguimiento":
         f"{sesiones_realizadas} sesiones registradas"
     )
 
-    # =====================================================
-    # KPIs PRINCIPALES
-    # =====================================================
-
     col1, col2, col3, col4 = (
-        st.columns(4)
+        st.columns(
+            4
+        )
     )
 
-    with col1:
-
-        st.metric(
-            "Volumen cumplido",
-            f"{volumen_pct_total:.1f}%",
-            delta=(
-                f"{volumen_pct_total - 100:+.1f}% "
-                "vs plan"
-            )
+    col1.metric(
+        "Volumen cumplido",
+        f"{volumen_pct_total:.1f}%",
+        delta=(
+            f"{volumen_pct_total - 100:+.1f}% "
+            "vs plan"
         )
+    )
 
-    with col2:
-
-        st.metric(
-            "Carga cumplida",
-            f"{carga_pct_total:.1f}%",
-            delta=(
-                f"{carga_pct_total - 100:+.1f}% "
-                "vs plan"
-            )
+    col2.metric(
+        "Carga cumplida",
+        f"{carga_pct_total:.1f}%",
+        delta=(
+            f"{carga_pct_total - 100:+.1f}% "
+            "vs plan"
         )
+    )
 
-    with col3:
+    col3.metric(
+        "RPE medio",
+        f"{rpe_real_total:.1f}",
+        delta=(
+            f"{dif_rpe_total:+.1f} "
+            "vs plan"
+        ),
+        delta_color="inverse"
+    )
 
-        st.metric(
-            "RPE medio",
-            f"{rpe_real_total:.1f}",
-            delta=(
-                f"{dif_rpe_total:+.1f} "
-                "vs plan"
-            ),
-            delta_color="inverse"
+    col4.metric(
+        "Última semana",
+        int(
+            ultima_semana[
+                "Semana"
+            ]
+        ),
+        delta=(
+            f"{ultima_semana['Carga %']:.1f}% "
+            "carga"
         )
-
-    with col4:
-
-        st.metric(
-            "Última semana",
-            int(
-                ultima_semana[
-                    "Semana"
-                ]
-            ),
-            delta=(
-                f"{ultima_semana['Carga %']:.1f}% "
-                "carga"
-            )
-        )
-
-    # =====================================================
-    # COACH INSIGHTS
-    # =====================================================
+    )
 
     st.divider()
 
@@ -3945,23 +4192,43 @@ elif pagina == "Seguimiento":
         "respecto a la planificación."
     )
 
-    insights = generar_coach_insights(
-        resumen
+    insights = (
+        generar_coach_insights(
+            resumen
+        )
     )
 
     for insight in insights:
 
-        nivel = insight["nivel"]
-        titulo = insight["titulo"]
-        mensaje = insight["mensaje"]
-        accion = insight["accion"]
+        nivel = (
+            insight[
+                "nivel"
+            ]
+        )
 
-        if nivel == "POSITIVO":
+        titulo = (
+            insight[
+                "titulo"
+            ]
+        )
 
-            with st.container(
-                border=True
-            ):
+        mensaje = (
+            insight[
+                "mensaje"
+            ]
+        )
 
+        accion = (
+            insight[
+                "accion"
+            ]
+        )
+
+        with st.container(
+            border=True
+        ):
+
+            if nivel == "POSITIVO":
                 st.markdown(
                     f"### ✅ {titulo}"
                 )
@@ -3974,12 +4241,7 @@ elif pagina == "Seguimiento":
                     f"**Acción sugerida:** {accion}"
                 )
 
-        elif nivel == "ALERTA":
-
-            with st.container(
-                border=True
-            ):
-
+            elif nivel == "ALERTA":
                 st.markdown(
                     f"### 🔴 {titulo}"
                 )
@@ -3992,12 +4254,7 @@ elif pagina == "Seguimiento":
                     f"**Acción sugerida:** {accion}"
                 )
 
-        elif nivel == "ATENCION":
-
-            with st.container(
-                border=True
-            ):
-
+            elif nivel == "ATENCION":
                 st.markdown(
                     f"### 🟠 {titulo}"
                 )
@@ -4010,12 +4267,7 @@ elif pagina == "Seguimiento":
                     f"**Acción sugerida:** {accion}"
                 )
 
-        else:
-
-            with st.container(
-                border=True
-            ):
-
+            else:
                 st.markdown(
                     f"### 🔵 {titulo}"
                 )
@@ -4028,10 +4280,6 @@ elif pagina == "Seguimiento":
                     f"**Acción sugerida:** {accion}"
                 )
 
-    # =====================================================
-    # ÚLTIMA SEMANA
-    # =====================================================
-
     st.divider()
 
     st.subheader(
@@ -4039,7 +4287,9 @@ elif pagina == "Seguimiento":
     )
 
     col1, col2, col3 = (
-        st.columns(3)
+        st.columns(
+            3
+        )
     )
 
     col1.metric(
@@ -4057,10 +4307,6 @@ elif pagina == "Seguimiento":
         f"{ultima_semana['Dif. RPE']:+.1f}"
     )
 
-    # =====================================================
-    # TABS
-    # =====================================================
-
     st.divider()
 
     tab_volumen, tab_carga, tab_rpe, tab_tabla = (
@@ -4073,10 +4319,6 @@ elif pagina == "Seguimiento":
             ]
         )
     )
-
-    # =====================================================
-    # GRÁFICA VOLUMEN
-    # =====================================================
 
     with tab_volumen:
 
@@ -4135,7 +4377,7 @@ elif pagina == "Seguimiento":
                         "Volumen:Q",
                         title="Volumen",
                         format=".0f"
-                    )
+                    ),
                 ]
             )
             .properties(
@@ -4150,14 +4392,9 @@ elif pagina == "Seguimiento":
         )
 
         st.caption(
-            "El objetivo es observar si el volumen real "
-            "se mantiene cerca de la planificación a lo largo "
-            "del bloque."
+            "El objetivo es observar si el volumen real se mantiene cerca "
+            "de la planificación a lo largo del bloque."
         )
-
-    # =====================================================
-    # GRÁFICA CARGA
-    # =====================================================
 
     with tab_carga:
 
@@ -4216,7 +4453,7 @@ elif pagina == "Seguimiento":
                         "Carga:Q",
                         title="Carga",
                         format=".0f"
-                    )
+                    ),
                 ]
             )
             .properties(
@@ -4231,13 +4468,8 @@ elif pagina == "Seguimiento":
         )
 
         st.caption(
-            "La carga combina el volumen realizado "
-            "con el RPE reportado."
+            "La carga combina el volumen realizado con el RPE reportado."
         )
-
-    # =====================================================
-    # GRÁFICA RPE
-    # =====================================================
 
     with tab_rpe:
 
@@ -4302,7 +4534,7 @@ elif pagina == "Seguimiento":
                         "RPE:Q",
                         title="RPE",
                         format=".1f"
-                    )
+                    ),
                 ]
             )
             .properties(
@@ -4317,14 +4549,9 @@ elif pagina == "Seguimiento":
         )
 
         st.caption(
-            "Una separación creciente entre RPE planificado "
-            "y RPE real indica que la respuesta del atleta "
-            "está cambiando respecto al plan."
+            "Una separación creciente entre RPE planificado y RPE real "
+            "indica que la respuesta del atleta está cambiando respecto al plan."
         )
-
-    # =====================================================
-    # TABLA SEMANAL
-    # =====================================================
 
     with tab_tabla:
 
@@ -4332,39 +4559,77 @@ elif pagina == "Seguimiento":
             "Cumplimiento semanal"
         )
 
-        tabla = resumen[
-            [
-                "Semana",
-                "Volumen planificado",
-                "Volumen real",
-                "Volumen %",
-                "RPE planificado",
-                "RPE real",
-                "Dif. RPE",
-                "Carga planificada",
-                "Carga real",
+        tabla = (
+            resumen[
+                [
+                    "Semana",
+                    "Volumen planificado",
+                    "Volumen real",
+                    "Volumen %",
+                    "RPE planificado",
+                    "RPE real",
+                    "Dif. RPE",
+                    "Carga planificada",
+                    "Carga real",
+                    "Carga %",
+                ]
+            ]
+            .copy()
+        )
+
+        tabla[
+            "Volumen %"
+        ] = (
+            tabla[
+                "Volumen %"
+            ]
+            .round(
+                1
+            )
+        )
+
+        tabla[
+            "Carga %"
+        ] = (
+            tabla[
                 "Carga %"
             ]
-        ].copy()
-
-        tabla["Volumen %"] = (
-            tabla["Volumen %"].round(1)
+            .round(
+                1
+            )
         )
 
-        tabla["Carga %"] = (
-            tabla["Carga %"].round(1)
+        tabla[
+            "RPE planificado"
+        ] = (
+            tabla[
+                "RPE planificado"
+            ]
+            .round(
+                1
+            )
         )
 
-        tabla["RPE planificado"] = (
-            tabla["RPE planificado"].round(1)
+        tabla[
+            "RPE real"
+        ] = (
+            tabla[
+                "RPE real"
+            ]
+            .round(
+                1
+            )
         )
 
-        tabla["RPE real"] = (
-            tabla["RPE real"].round(1)
-        )
-
-        tabla["Dif. RPE"] = (
-            tabla["Dif. RPE"].round(1)
+        tabla[
+            "Dif. RPE"
+        ] = (
+            tabla[
+                "Dif. RPE"
+            ]
+            .round(
+                1
+            )
         )
 
         st.dataframe(
@@ -4372,9 +4637,6 @@ elif pagina == "Seguimiento":
             use_container_width=True,
             hide_index=True
         )
-    # =====================================================
-    # RELACIÓN VOLUMEN – RPE
-    # =====================================================
 
     st.divider()
 
@@ -4388,30 +4650,34 @@ elif pagina == "Seguimiento":
         "para el nivel de esfuerzo percibido."
     )
 
-    # =====================================================
-    # DATOS PARA SCATTER
-    # =====================================================
-
-    scatter_data = resumen[
-        [
-            "Semana",
-            "Volumen real",
-            "RPE real",
-            "Volumen %",
-            "Carga %",
-            "Dif. RPE"
+    scatter_data = (
+        resumen[
+            [
+                "Semana",
+                "Volumen real",
+                "RPE real",
+                "Volumen %",
+                "Carga %",
+                "Dif. RPE",
+            ]
         ]
-    ].copy()
-
-    scatter_data = scatter_data.dropna(
-        subset=[
-            "Semana",
-            "Volumen real",
-            "RPE real"
-        ]
+        .copy()
     )
 
-    scatter_data["Semana texto"] = (
+    scatter_data = (
+        scatter_data
+        .dropna(
+            subset=[
+                "Semana",
+                "Volumen real",
+                "RPE real"
+            ]
+        )
+    )
+
+    scatter_data[
+        "Semana texto"
+    ] = (
         "Semana "
         +
         scatter_data[
@@ -4420,10 +4686,6 @@ elif pagina == "Seguimiento":
         .astype(int)
         .astype(str)
     )
-
-    # =====================================================
-    # SCATTER
-    # =====================================================
 
     scatter_volumen_rpe = (
         alt.Chart(
@@ -4434,7 +4696,6 @@ elif pagina == "Seguimiento":
             opacity=0.85
         )
         .encode(
-
             x=alt.X(
                 "Volumen real:Q",
                 title="Volumen real"
@@ -4502,7 +4763,7 @@ elif pagina == "Seguimiento":
                     "Dif. RPE:Q",
                     title="Δ RPE",
                     format="+.1f"
-                )
+                ),
             ]
         )
         .properties(
@@ -4516,12 +4777,9 @@ elif pagina == "Seguimiento":
         use_container_width=True
     )
 
-
-    # =====================================================
-    # INTERPRETACIÓN DE LA TENDENCIA
-    # =====================================================
-
-    if len(scatter_data) >= 2:
+    if len(
+        scatter_data
+    ) >= 2:
 
         primera_semana_scatter = (
             scatter_data
@@ -4563,15 +4821,11 @@ elif pagina == "Seguimiento":
             "Interpretación"
         )
 
-        # ---------------------------------------------
-        # MÁS VOLUMEN + RPE ESTABLE / MENOR
-        # ---------------------------------------------
-
         if (
             cambio_volumen > 0
-            and cambio_rpe <= 0.5
+            and
+            cambio_rpe <= 0.5
         ):
-
             st.success(
                 "✅ Posible adaptación positiva: "
                 "el atleta está produciendo más volumen "
@@ -4579,20 +4833,16 @@ elif pagina == "Seguimiento":
             )
 
             st.write(
-                "Esto puede indicar una mejor tolerancia "
-                "al estímulo. Si la técnica y la recuperación "
-                "son buenas, la progresión puede mantenerse."
+                "Esto puede indicar una mejor tolerancia al estímulo. "
+                "Si la técnica y la recuperación son buenas, "
+                "la progresión puede mantenerse."
             )
-
-        # ---------------------------------------------
-        # MENOS VOLUMEN + MÁS RPE
-        # ---------------------------------------------
 
         elif (
             cambio_volumen < 0
-            and cambio_rpe > 0.5
+            and
+            cambio_rpe > 0.5
         ):
-
             st.error(
                 "🔴 Señal de atención: "
                 "el atleta está produciendo menos volumen "
@@ -4600,24 +4850,23 @@ elif pagina == "Seguimiento":
             )
 
             st.write(
-                "Conviene revisar recuperación, dificultad "
-                "de las sesiones y calidad de ejecución antes "
-                "de progresar la carga."
+                "Conviene revisar recuperación, dificultad de las sesiones "
+                "y calidad de ejecución antes de progresar la carga."
             )
 
-        # ---------------------------------------------
-        # MISMO VOLUMEN + MENOS RPE
-        # ---------------------------------------------
-
         elif (
-            abs(cambio_volumen)
+            abs(
+                cambio_volumen
+            )
             <=
             primera_semana_scatter[
                 "Volumen real"
-            ] * 0.10
-            and cambio_rpe < -0.5
+            ]
+            *
+            0.10
+            and
+            cambio_rpe < -0.5
         ):
-
             st.success(
                 "✅ Mejora de tolerancia: "
                 "el atleta mantiene un volumen similar "
@@ -4629,50 +4878,37 @@ elif pagina == "Seguimiento":
                 "una progresión gradual del estímulo."
             )
 
-        # ---------------------------------------------
-        # MÁS VOLUMEN + MÁS RPE
-        # ---------------------------------------------
-
         elif (
             cambio_volumen > 0
-            and cambio_rpe > 0.5
+            and
+            cambio_rpe > 0.5
         ):
-
             st.warning(
                 "🟠 La carga de trabajo está aumentando "
                 "junto con el esfuerzo percibido."
             )
 
             st.write(
-                "No necesariamente es negativo si estaba "
-                "planificado. Conviene observar las próximas "
-                "semanas antes de seguir aumentando."
+                "No necesariamente es negativo si estaba planificado. "
+                "Conviene observar las próximas semanas "
+                "antes de seguir aumentando."
             )
 
-        # ---------------------------------------------
-        # ESTABLE
-        # ---------------------------------------------
-
         else:
-
             st.info(
                 "🔵 Relación Volumen–RPE estable."
             )
 
             st.write(
-                "No se observa un cambio suficientemente "
-                "grande para inferir una tendencia clara."
+                "No se observa un cambio suficientemente grande "
+                "para inferir una tendencia clara."
             )
 
     else:
-
         st.info(
             "Se necesitan al menos 2 semanas registradas "
             "para interpretar la tendencia Volumen–RPE."
         )
-            # =====================================================
-    # PERFIL DE CARGA POR TIPO DE SESIÓN
-    # =====================================================
 
     st.divider()
 
@@ -4681,14 +4917,9 @@ elif pagina == "Seguimiento":
     )
 
     st.caption(
-        "Analiza qué tipos de entrenamiento están aportando "
-        "más carga al bloque y cuánto se ejecutó respecto al plan."
+        "Analiza qué tipos de entrenamiento están aportando más carga al bloque "
+        "y cuánto se ejecutó respecto al plan."
     )
-
-
-    # =====================================================
-    # PREPARAR DATOS
-    # =====================================================
 
     df_tipo = (
         df_alumno[
@@ -4699,16 +4930,19 @@ elif pagina == "Seguimiento":
                 "RPE planificado",
                 "RPE real",
                 "Carga planificada",
-                "Carga real"
+                "Carga real",
             ]
         ]
         .copy()
     )
 
-    df_tipo = df_tipo.dropna(
-        subset=[
-            "Tipo de sesión"
-        ]
+    df_tipo = (
+        df_tipo
+        .dropna(
+            subset=[
+                "Tipo de sesión"
+            ]
+        )
     )
 
     df_tipo[
@@ -4721,11 +4955,6 @@ elif pagina == "Seguimiento":
         .str.strip()
     )
 
-
-    # =====================================================
-    # AGRUPAR POR TIPO DE SESIÓN
-    # =====================================================
-
     perfil_tipo = (
         df_tipo
         .groupby(
@@ -4733,55 +4962,80 @@ elif pagina == "Seguimiento":
             as_index=False
         )
         .agg({
-            "Volumen planificado": "sum",
-            "Volumen real": "sum",
-            "RPE planificado": "mean",
-            "RPE real": "mean",
-            "Carga planificada": "sum",
-            "Carga real": "sum"
+            "Volumen planificado":
+                "sum",
+
+            "Volumen real":
+                "sum",
+
+            "RPE planificado":
+                "mean",
+
+            "RPE real":
+                "mean",
+
+            "Carga planificada":
+                "sum",
+
+            "Carga real":
+                "sum",
         })
     )
 
-
-    # =====================================================
-    # MÉTRICAS DERIVADAS
-    # =====================================================
-
-    perfil_tipo["Volumen %"] = (
-        perfil_tipo["Volumen real"]
+    perfil_tipo[
+        "Volumen %"
+    ] = (
+        perfil_tipo[
+            "Volumen real"
+        ]
         /
-        perfil_tipo["Volumen planificado"]
+        perfil_tipo[
+            "Volumen planificado"
+        ]
         *
         100
     )
 
-    perfil_tipo["Carga %"] = (
-        perfil_tipo["Carga real"]
+    perfil_tipo[
+        "Carga %"
+    ] = (
+        perfil_tipo[
+            "Carga real"
+        ]
         /
-        perfil_tipo["Carga planificada"]
+        perfil_tipo[
+            "Carga planificada"
+        ]
         *
         100
     )
 
-    perfil_tipo["Dif. RPE"] = (
-        perfil_tipo["RPE real"]
+    perfil_tipo[
+        "Dif. RPE"
+    ] = (
+        perfil_tipo[
+            "RPE real"
+        ]
         -
-        perfil_tipo["RPE planificado"]
+        perfil_tipo[
+            "RPE planificado"
+        ]
     )
 
-
-    perfil_tipo = perfil_tipo.replace(
-        [
-            float("inf"),
-            float("-inf")
-        ],
-        pd.NA
+    perfil_tipo = (
+        perfil_tipo
+        .replace(
+            [
+                float(
+                    "inf"
+                ),
+                float(
+                    "-inf"
+                )
+            ],
+            pd.NA
+        )
     )
-
-
-    # =====================================================
-    # PARTICIPACIÓN EN LA CARGA TOTAL
-    # =====================================================
 
     carga_total_tipo = (
         perfil_tipo[
@@ -4791,7 +5045,6 @@ elif pagina == "Seguimiento":
     )
 
     if carga_total_tipo > 0:
-
         perfil_tipo[
             "Participación carga %"
         ] = (
@@ -4805,15 +5058,9 @@ elif pagina == "Seguimiento":
         )
 
     else:
-
         perfil_tipo[
             "Participación carga %"
         ] = 0
-
-
-    # =====================================================
-    # KPIs
-    # =====================================================
 
     if not perfil_tipo.empty:
 
@@ -4839,7 +5086,10 @@ elif pagina == "Seguimiento":
             perfil_tipo
             .assign(
                 Desviacion_abs=lambda x:
-                    x["Dif. RPE"].abs()
+                    x[
+                        "Dif. RPE"
+                    ]
+                    .abs()
             )
             .sort_values(
                 "Desviacion_abs",
@@ -4848,11 +5098,11 @@ elif pagina == "Seguimiento":
             .iloc[0]
         )
 
-
         col1, col2, col3 = (
-            st.columns(3)
+            st.columns(
+                3
+            )
         )
-
 
         col1.metric(
             "Mayor carga",
@@ -4865,18 +5115,17 @@ elif pagina == "Seguimiento":
             )
         )
 
-
         col2.metric(
             "Mayor RPE",
             tipo_mayor_rpe[
                 "Tipo de sesión"
             ],
             delta=(
-                f"RPE {tipo_mayor_rpe['RPE real']:.1f}"
+                f"RPE "
+                f"{tipo_mayor_rpe['RPE real']:.1f}"
             ),
             delta_color="off"
         )
-
 
         col3.metric(
             "Mayor desviación de RPE",
@@ -4890,11 +5139,6 @@ elif pagina == "Seguimiento":
             delta_color="inverse"
         )
 
-
-    # =====================================================
-    # TABS
-    # =====================================================
-
     tab_tipo_carga, tab_tipo_cumplimiento, tab_tipo_rpe = (
         st.tabs(
             [
@@ -4904,11 +5148,6 @@ elif pagina == "Seguimiento":
             ]
         )
     )
-
-
-    # =====================================================
-    # CARGA POR TIPO
-    # =====================================================
 
     with tab_tipo_carga:
 
@@ -4922,7 +5161,6 @@ elif pagina == "Seguimiento":
             )
             .mark_bar()
             .encode(
-
                 x=alt.X(
                     "Carga real:Q",
                     title="Carga real"
@@ -4956,7 +5194,7 @@ elif pagina == "Seguimiento":
                         "RPE real:Q",
                         title="RPE medio",
                         format=".1f"
-                    )
+                    ),
                 ]
             )
             .properties(
@@ -4964,7 +5202,9 @@ elif pagina == "Seguimiento":
                     280,
                     len(
                         perfil_tipo
-                    ) * 45
+                    )
+                    *
+                    45
                 )
             )
         )
@@ -4975,14 +5215,9 @@ elif pagina == "Seguimiento":
         )
 
         st.caption(
-            "Permite detectar qué tipos de sesión están "
-            "aportando la mayor proporción de carga del bloque."
+            "Permite detectar qué tipos de sesión están aportando "
+            "la mayor proporción de carga del bloque."
         )
-
-
-    # =====================================================
-    # CUMPLIMIENTO PLAN VS REAL
-    # =====================================================
 
     with tab_tipo_cumplimiento:
 
@@ -5011,7 +5246,6 @@ elif pagina == "Seguimiento":
             )
             .mark_bar()
             .encode(
-
                 x=alt.X(
                     "Carga:Q",
                     title="Carga"
@@ -5045,7 +5279,7 @@ elif pagina == "Seguimiento":
                         "Carga:Q",
                         title="Carga",
                         format=".0f"
-                    )
+                    ),
                 ]
             )
             .properties(
@@ -5053,7 +5287,9 @@ elif pagina == "Seguimiento":
                     280,
                     len(
                         perfil_tipo
-                    ) * 55
+                    )
+                    *
+                    55
                 )
             )
         )
@@ -5063,21 +5299,23 @@ elif pagina == "Seguimiento":
             use_container_width=True
         )
 
-
         st.subheader(
             "Cumplimiento por tipo"
         )
 
-        tabla_tipo = perfil_tipo[
-            [
-                "Tipo de sesión",
-                "Volumen %",
-                "Carga %",
-                "RPE planificado",
-                "RPE real",
-                "Dif. RPE"
+        tabla_tipo = (
+            perfil_tipo[
+                [
+                    "Tipo de sesión",
+                    "Volumen %",
+                    "Carga %",
+                    "RPE planificado",
+                    "RPE real",
+                    "Dif. RPE",
+                ]
             ]
-        ].copy()
+            .copy()
+        )
 
         tabla_tipo[
             "Volumen %"
@@ -5085,7 +5323,9 @@ elif pagina == "Seguimiento":
             tabla_tipo[
                 "Volumen %"
             ]
-            .round(1)
+            .round(
+                1
+            )
         )
 
         tabla_tipo[
@@ -5094,7 +5334,9 @@ elif pagina == "Seguimiento":
             tabla_tipo[
                 "Carga %"
             ]
-            .round(1)
+            .round(
+                1
+            )
         )
 
         tabla_tipo[
@@ -5103,7 +5345,9 @@ elif pagina == "Seguimiento":
             tabla_tipo[
                 "RPE planificado"
             ]
-            .round(1)
+            .round(
+                1
+            )
         )
 
         tabla_tipo[
@@ -5112,7 +5356,9 @@ elif pagina == "Seguimiento":
             tabla_tipo[
                 "RPE real"
             ]
-            .round(1)
+            .round(
+                1
+            )
         )
 
         tabla_tipo[
@@ -5121,7 +5367,9 @@ elif pagina == "Seguimiento":
             tabla_tipo[
                 "Dif. RPE"
             ]
-            .round(1)
+            .round(
+                1
+            )
         )
 
         st.dataframe(
@@ -5129,11 +5377,6 @@ elif pagina == "Seguimiento":
             use_container_width=True,
             hide_index=True
         )
-
-
-    # =====================================================
-    # RPE POR TIPO
-    # =====================================================
 
     with tab_tipo_rpe:
 
@@ -5162,7 +5405,6 @@ elif pagina == "Seguimiento":
             )
             .mark_bar()
             .encode(
-
                 x=alt.X(
                     "Tipo de sesión:N",
                     title="Tipo de sesión"
@@ -5201,7 +5443,7 @@ elif pagina == "Seguimiento":
                         "RPE:Q",
                         title="RPE",
                         format=".1f"
-                    )
+                    ),
                 ]
             )
             .properties(
@@ -5214,15 +5456,9 @@ elif pagina == "Seguimiento":
             use_container_width=True
         )
 
-
-    # =====================================================
-    # INTERPRETACIÓN PARA EL COACH
-    # =====================================================
-
     st.subheader(
         "Lectura del bloque"
     )
-
 
     for _, fila_tipo in perfil_tipo.iterrows():
 
@@ -5250,80 +5486,54 @@ elif pagina == "Seguimiento":
             ]
         )
 
-
-        # ---------------------------------------------
-        # DEMASIADO EXIGENTE
-        # ---------------------------------------------
-
         if (
             carga_pct > 115
-            and dif_rpe >= 1
+            and
+            dif_rpe >= 1
         ):
-
             st.error(
                 f"🔴 **{tipo}:** carga {carga_pct:.1f}% "
                 f"y ΔRPE {dif_rpe:+.1f}. "
-                "Este estímulo está siendo más exigente "
-                "de lo previsto."
+                "Este estímulo está siendo más exigente de lo previsto."
             )
-
-
-        # ---------------------------------------------
-        # POCO ESTÍMULO
-        # ---------------------------------------------
 
         elif (
             carga_pct < 85
-            and dif_rpe <= 0
+            and
+            dif_rpe <= 0
         ):
-
             st.info(
                 f"🔵 **{tipo}:** carga {carga_pct:.1f}% "
                 f"y ΔRPE {dif_rpe:+.1f}. "
-                "El estímulo ejecutado está por debajo "
-                "de lo planificado."
+                "El estímulo ejecutado está por debajo de lo planificado."
             )
-
-
-        # ---------------------------------------------
-        # MENOS VOLUMEN PERO ALTO RPE
-        # ---------------------------------------------
 
         elif (
             volumen_pct < 85
-            and dif_rpe >= 1
+            and
+            dif_rpe >= 1
         ):
-
             st.warning(
                 f"🟠 **{tipo}:** solo se completó "
-                f"{volumen_pct:.1f}% del volumen, pero el "
-                f"RPE estuvo {dif_rpe:+.1f} sobre el plan. "
+                f"{volumen_pct:.1f}% del volumen, "
+                f"pero el RPE estuvo {dif_rpe:+.1f} sobre el plan. "
                 "Conviene revisar la dificultad del estímulo."
             )
 
-
-        # ---------------------------------------------
-        # CORRECTO
-        # ---------------------------------------------
-
         elif (
             90 <= carga_pct <= 110
-            and abs(dif_rpe) < 1
+            and
+            abs(
+                dif_rpe
+            ) < 1
         ):
-
             st.success(
                 f"✅ **{tipo}:** respuesta acorde al plan "
                 f"(Carga {carga_pct:.1f}% · "
                 f"ΔRPE {dif_rpe:+.1f})."
             )
 
-
-        # ---------------------------------------------
-        # INTERMEDIO
-        # ---------------------------------------------
-
         else:
-
             st.info(
                 f"🟡 **{tipo}:** "
                 f"Volumen {volumen_pct:.1f}% · "
@@ -5331,6 +5541,8 @@ elif pagina == "Seguimiento":
                 f"ΔRPE {dif_rpe:+.1f}. "
                 "Continuar monitoreando."
             )
+
+
 # =========================================================
 # VISTA GRUPO
 # =========================================================
@@ -5346,12 +5558,10 @@ elif pagina == "Vista grupo":
         "entre todos los atletas."
     )
 
-    # =====================================================
-    # LEER HISTORIAL
-    # =====================================================
-
-    df_grupo = leer_hoja(
-        "Historial semanal"
+    df_grupo = (
+        leer_hoja(
+            "Historial semanal"
+        )
     )
 
     columnas_numericas = [
@@ -5362,28 +5572,37 @@ elif pagina == "Vista grupo":
         "RPE planificado",
         "RPE real",
         "Carga planificada",
-        "Carga real"
+        "Carga real",
     ]
 
     for columna in columnas_numericas:
 
         if columna in df_grupo.columns:
 
-            df_grupo[columna] = pd.to_numeric(
-                df_grupo[columna],
-                errors="coerce"
+            df_grupo[
+                columna
+            ] = (
+                pd.to_numeric(
+                    df_grupo[
+                        columna
+                    ],
+                    errors="coerce"
+                )
             )
 
-    # =====================================================
-    # SELECCIONAR BLOQUE
-    # =====================================================
-
-    bloque_grupo = st.selectbox(
-        "Bloque",
-        [1, 2, 3, 4],
-        index=None,
-        placeholder="Selecciona un bloque...",
-        key="bloque_grupo"
+    bloque_grupo = (
+        st.selectbox(
+            "Bloque",
+            [
+                1,
+                2,
+                3,
+                4
+            ],
+            index=None,
+            placeholder="Selecciona un bloque...",
+            key="bloque_grupo"
+        )
     )
 
     if bloque_grupo is None:
@@ -5398,62 +5617,68 @@ elif pagina == "Vista grupo":
         1: (1, 13),
         2: (14, 26),
         3: (27, 39),
-        4: (40, 52)
+        4: (40, 52),
     }
 
-    inicio, fin = rangos[
-        bloque_grupo
-    ]
+    inicio, fin = (
+        rangos[
+            bloque_grupo
+        ]
+    )
 
     df_grupo = (
         df_grupo[
             (
-                df_grupo["Semana"]
-                >= inicio
+                df_grupo[
+                    "Semana"
+                ]
+                >=
+                inicio
             )
             &
             (
-                df_grupo["Semana"]
-                <= fin
+                df_grupo[
+                    "Semana"
+                ]
+                <=
+                fin
             )
         ]
         .copy()
     )
 
     if df_grupo.empty:
-
         st.info(
             "No existen registros para este bloque."
         )
 
         st.stop()
 
-    # =====================================================
-    # LIMPIAR
-    # =====================================================
-
-    df_grupo = df_grupo.dropna(
-        subset=[
-            "Alumno",
-            "Semana",
-            "Volumen planificado",
-            "Volumen real",
-            "RPE planificado",
-            "RPE real",
-            "Carga planificada",
-            "Carga real"
-        ]
+    df_grupo = (
+        df_grupo
+        .dropna(
+            subset=[
+                "Alumno",
+                "Semana",
+                "Volumen planificado",
+                "Volumen real",
+                "RPE planificado",
+                "RPE real",
+                "Carga planificada",
+                "Carga real",
+            ]
+        )
     )
 
-    df_grupo["Alumno"] = (
-        df_grupo["Alumno"]
+    df_grupo[
+        "Alumno"
+    ] = (
+        df_grupo[
+            "Alumno"
+        ]
         .astype(str)
         .str.strip()
     )
-
-    # =====================================================
-    # RESUMEN SEMANAL POR ATLETA
-    # =====================================================
 
     resumen_grupo = (
         df_grupo
@@ -5465,99 +5690,160 @@ elif pagina == "Vista grupo":
             as_index=False
         )
         .agg({
-            "Volumen planificado": "sum",
-            "Volumen real": "sum",
-            "RPE planificado": "mean",
-            "RPE real": "mean",
-            "Carga planificada": "sum",
-            "Carga real": "sum",
-            "Sesión": "count"
+            "Volumen planificado":
+                "sum",
+
+            "Volumen real":
+                "sum",
+
+            "RPE planificado":
+                "mean",
+
+            "RPE real":
+                "mean",
+
+            "Carga planificada":
+                "sum",
+
+            "Carga real":
+                "sum",
+
+            "Sesión":
+                "count",
         })
         .rename(
             columns={
-                "Sesión": "Sesiones registradas"
+                "Sesión":
+                    "Sesiones registradas"
             }
         )
     )
 
-    # =====================================================
-    # MÉTRICAS
-    # =====================================================
-
-    resumen_grupo["Volumen %"] = (
-        resumen_grupo["Volumen real"]
+    resumen_grupo[
+        "Volumen %"
+    ] = (
+        resumen_grupo[
+            "Volumen real"
+        ]
         /
-        resumen_grupo["Volumen planificado"]
+        resumen_grupo[
+            "Volumen planificado"
+        ]
         *
         100
     )
 
-    resumen_grupo["Carga %"] = (
-        resumen_grupo["Carga real"]
+    resumen_grupo[
+        "Carga %"
+    ] = (
+        resumen_grupo[
+            "Carga real"
+        ]
         /
-        resumen_grupo["Carga planificada"]
+        resumen_grupo[
+            "Carga planificada"
+        ]
         *
         100
     )
-    # =====================================================
-    # DIFERENCIA RPE
-    # =====================================================
 
-    resumen_grupo["RPE planificado"] = pd.to_numeric(
-        resumen_grupo["RPE planificado"],
-        errors="coerce"
+    resumen_grupo[
+        "RPE planificado"
+    ] = (
+        pd.to_numeric(
+            resumen_grupo[
+                "RPE planificado"
+            ],
+            errors="coerce"
+        )
     )
 
-    resumen_grupo["RPE real"] = pd.to_numeric(
-        resumen_grupo["RPE real"],
-        errors="coerce"
+    resumen_grupo[
+        "RPE real"
+    ] = (
+        pd.to_numeric(
+            resumen_grupo[
+                "RPE real"
+            ],
+            errors="coerce"
+        )
     )
 
-    resumen_grupo["Dif. RPE"] = (
-        resumen_grupo["RPE real"]
+    resumen_grupo[
+        "Dif. RPE"
+    ] = (
+        resumen_grupo[
+            "RPE real"
+        ]
         -
-        resumen_grupo["RPE planificado"]
-    )
-
-    resumen_grupo["Dif. RPE"] = pd.to_numeric(
-        resumen_grupo["Dif. RPE"],
-        errors="coerce"
-    )
-
-    resumen_grupo = resumen_grupo.replace(
-        [
-            float("inf"),
-            float("-inf")
-        ],
-        pd.NA
-    )
-
-    resumen_grupo = resumen_grupo.dropna(
-        subset=[
-            "Volumen %",
-            "Carga %",
-            "Dif. RPE"
+        resumen_grupo[
+            "RPE planificado"
         ]
     )
 
-    # =====================================================
-    # NIVEL DE ATENCIÓN
-    # =====================================================
+    resumen_grupo[
+        "Dif. RPE"
+    ] = (
+        pd.to_numeric(
+            resumen_grupo[
+                "Dif. RPE"
+            ],
+            errors="coerce"
+        )
+    )
 
-    resumen_grupo["Nivel"] = resumen_grupo.apply(
-        lambda fila: clasificar_estado(
-            fila["Volumen %"],
-            fila["Carga %"],
-            fila["Dif. RPE"]
-        ),
-        axis=1
+    resumen_grupo = (
+        resumen_grupo
+        .replace(
+            [
+                float(
+                    "inf"
+                ),
+                float(
+                    "-inf"
+                )
+            ],
+            pd.NA
+        )
+    )
+
+    resumen_grupo = (
+        resumen_grupo
+        .dropna(
+            subset=[
+                "Volumen %",
+                "Carga %",
+                "Dif. RPE"
+            ]
+        )
+    )
+
+    resumen_grupo[
+        "Nivel"
+    ] = (
+        resumen_grupo
+        .apply(
+            lambda fila:
+                clasificar_estado(
+                    fila[
+                        "Volumen %"
+                    ],
+                    fila[
+                        "Carga %"
+                    ],
+                    fila[
+                        "Dif. RPE"
+                    ]
+                ),
+            axis=1
+        )
     )
 
     mapa_nivel = {
         "OK": 0,
         "MONITOREAR": 1,
         "REVISAR": 2,
-        "ALTA": 3
+        "ALTA": 3,
     }
 
     resumen_grupo[
@@ -5578,14 +5864,13 @@ elif pagina == "Vista grupo":
             "Nivel"
         ]
         .replace({
-            "MONITOREAR": "MON",
-            "REVISAR": "REV"
+            "MONITOREAR":
+                "MON",
+
+            "REVISAR":
+                "REV",
         })
     )
-
-    # =====================================================
-    # SEMANA MÁS RECIENTE
-    # =====================================================
 
     semana_reciente = int(
         resumen_grupo[
@@ -5604,10 +5889,6 @@ elif pagina == "Vista grupo":
         ]
         .copy()
     )
-
-    # =====================================================
-    # KPIs DEL GRUPO
-    # =====================================================
 
     atletas_registrados = (
         resumen_grupo[
@@ -5651,11 +5932,14 @@ elif pagina == "Vista grupo":
     st.divider()
 
     st.subheader(
-        f"Semana más reciente: {semana_reciente}"
+        f"Semana más reciente: "
+        f"{semana_reciente}"
     )
 
     col1, col2, col3, col4 = (
-        st.columns(4)
+        st.columns(
+            4
+        )
     )
 
     col1.metric(
@@ -5678,27 +5962,25 @@ elif pagina == "Vista grupo":
         f"{rpe_diff_media:+.1f}"
     )
 
-    # =====================================================
-    # HEATMAP DEL GRUPO
-    # =====================================================
-
     st.divider()
 
     st.subheader(
         "Heatmap del grupo"
     )
 
-    metrica_heatmap = st.selectbox(
-        "Variable a visualizar",
-        [
-            "Nivel de atención",
-            "Carga %",
-            "Volumen %",
-            "Δ RPE"
-        ],
-        index=None,
-        placeholder="Selecciona una métrica...",
-        key="metrica_heatmap"
+    metrica_heatmap = (
+        st.selectbox(
+            "Variable a visualizar",
+            [
+                "Nivel de atención",
+                "Carga %",
+                "Volumen %",
+                "Δ RPE"
+            ],
+            index=None,
+            placeholder="Selecciona una métrica...",
+            key="metrica_heatmap"
+        )
     )
 
     if metrica_heatmap is None:
@@ -5708,61 +5990,99 @@ elif pagina == "Vista grupo":
         )
 
     else:
-
-        # =================================================
-        # COPIA DE DATOS PARA VISUALIZACIÓN
-        # =================================================
-
-        df_heatmap = resumen_grupo.copy()
-
-        df_heatmap["Semana"] = pd.to_numeric(
-            df_heatmap["Semana"],
-            errors="coerce"
+        df_heatmap = (
+            resumen_grupo
+            .copy()
         )
 
-        df_heatmap["Carga %"] = pd.to_numeric(
-            df_heatmap["Carga %"],
-            errors="coerce"
+        df_heatmap[
+            "Semana"
+        ] = (
+            pd.to_numeric(
+                df_heatmap[
+                    "Semana"
+                ],
+                errors="coerce"
+            )
         )
 
-        df_heatmap["Volumen %"] = pd.to_numeric(
-            df_heatmap["Volumen %"],
-            errors="coerce"
+        df_heatmap[
+            "Carga %"
+        ] = (
+            pd.to_numeric(
+                df_heatmap[
+                    "Carga %"
+                ],
+                errors="coerce"
+            )
         )
 
-        df_heatmap["Dif. RPE"] = pd.to_numeric(
-            df_heatmap["Dif. RPE"],
-            errors="coerce"
+        df_heatmap[
+            "Volumen %"
+        ] = (
+            pd.to_numeric(
+                df_heatmap[
+                    "Volumen %"
+                ],
+                errors="coerce"
+            )
         )
 
-        df_heatmap["RPE planificado"] = pd.to_numeric(
-            df_heatmap["RPE planificado"],
-            errors="coerce"
+        df_heatmap[
+            "Dif. RPE"
+        ] = (
+            pd.to_numeric(
+                df_heatmap[
+                    "Dif. RPE"
+                ],
+                errors="coerce"
+            )
         )
 
-        df_heatmap["RPE real"] = pd.to_numeric(
-            df_heatmap["RPE real"],
-            errors="coerce"
+        df_heatmap[
+            "RPE planificado"
+        ] = (
+            pd.to_numeric(
+                df_heatmap[
+                    "RPE planificado"
+                ],
+                errors="coerce"
+            )
         )
 
-        df_heatmap = df_heatmap.dropna(
-            subset=[
-                "Alumno",
-                "Semana"
-            ]
+        df_heatmap[
+            "RPE real"
+        ] = (
+            pd.to_numeric(
+                df_heatmap[
+                    "RPE real"
+                ],
+                errors="coerce"
+            )
         )
 
-
-        # =================================================
-        # NIVEL DE ATENCIÓN
-        # =================================================
-
-        if metrica_heatmap == "Nivel de atención":
-
-            df_chart = df_heatmap.dropna(
+        df_heatmap = (
+            df_heatmap
+            .dropna(
                 subset=[
-                    "Nivel"
+                    "Alumno",
+                    "Semana"
                 ]
+            )
+        )
+
+        if (
+            metrica_heatmap
+            ==
+            "Nivel de atención"
+        ):
+            df_chart = (
+                df_heatmap
+                .dropna(
+                    subset=[
+                        "Nivel"
+                    ]
+                )
             )
 
             grafica_final = (
@@ -5773,7 +6093,6 @@ elif pagina == "Vista grupo":
                     cornerRadius=5
                 )
                 .encode(
-
                     x=alt.X(
                         "Semana:O",
                         title="Semana"
@@ -5848,28 +6167,31 @@ elif pagina == "Vista grupo":
                             "Dif. RPE:Q",
                             title="Δ RPE",
                             format="+.1f"
-                        )
+                        ),
                     ]
                 )
                 .properties(
                     height=max(
                         250,
-                        atletas_registrados * 55
+                        atletas_registrados
+                        *
+                        55
                     )
                 )
             )
 
-
-        # =================================================
-        # CARGA
-        # =================================================
-
-        elif metrica_heatmap == "Carga %":
-
-            df_chart = df_heatmap.dropna(
-                subset=[
-                    "Carga %"
-                ]
+        elif (
+            metrica_heatmap
+            ==
+            "Carga %"
+        ):
+            df_chart = (
+                df_heatmap
+                .dropna(
+                    subset=[
+                        "Carga %"
+                    ]
+                )
             )
 
             grafica_final = (
@@ -5880,7 +6202,6 @@ elif pagina == "Vista grupo":
                     cornerRadius=5
                 )
                 .encode(
-
                     x=alt.X(
                         "Semana:O",
                         title="Semana"
@@ -5941,28 +6262,31 @@ elif pagina == "Vista grupo":
                         alt.Tooltip(
                             "Nivel:N",
                             title="Nivel"
-                        )
+                        ),
                     ]
                 )
                 .properties(
                     height=max(
                         250,
-                        atletas_registrados * 55
+                        atletas_registrados
+                        *
+                        55
                     )
                 )
             )
 
-
-        # =================================================
-        # VOLUMEN
-        # =================================================
-
-        elif metrica_heatmap == "Volumen %":
-
-            df_chart = df_heatmap.dropna(
-                subset=[
-                    "Volumen %"
-                ]
+        elif (
+            metrica_heatmap
+            ==
+            "Volumen %"
+        ):
+            df_chart = (
+                df_heatmap
+                .dropna(
+                    subset=[
+                        "Volumen %"
+                    ]
+                )
             )
 
             grafica_final = (
@@ -5973,7 +6297,6 @@ elif pagina == "Vista grupo":
                     cornerRadius=5
                 )
                 .encode(
-
                     x=alt.X(
                         "Semana:O",
                         title="Semana"
@@ -6034,92 +6357,112 @@ elif pagina == "Vista grupo":
                         alt.Tooltip(
                             "Nivel:N",
                             title="Nivel"
-                        )
+                        ),
                     ]
                 )
                 .properties(
                     height=max(
                         250,
-                        atletas_registrados * 55
+                        atletas_registrados
+                        *
+                        55
                     )
                 )
             )
 
-
-        # =================================================
-        # Δ RPE
-        # =================================================
-        # =================================================
-        # Δ RPE
-        # =================================================
-
         else:
-
-            df_chart = df_heatmap[
-                [
-                    "Alumno",
-                    "Semana",
-                    "RPE planificado",
-                    "RPE real",
-                    "Dif. RPE",
-                    "Carga %",
-                    "Volumen %",
-                    "Nivel"
+            df_chart = (
+                df_heatmap[
+                    [
+                        "Alumno",
+                        "Semana",
+                        "RPE planificado",
+                        "RPE real",
+                        "Dif. RPE",
+                        "Carga %",
+                        "Volumen %",
+                        "Nivel",
+                    ]
                 ]
-            ].copy()
-
-            # ---------------------------------------------
-            # LIMPIEZA ESPECÍFICA
-            # ---------------------------------------------
-
-            df_chart["Dif. RPE"] = pd.to_numeric(
-                df_chart["Dif. RPE"],
-                errors="coerce"
+                .copy()
             )
 
-            df_chart["RPE planificado"] = pd.to_numeric(
-                df_chart["RPE planificado"],
-                errors="coerce"
+            df_chart[
+                "Dif. RPE"
+            ] = (
+                pd.to_numeric(
+                    df_chart[
+                        "Dif. RPE"
+                    ],
+                    errors="coerce"
+                )
             )
 
-            df_chart["RPE real"] = pd.to_numeric(
-                df_chart["RPE real"],
-                errors="coerce"
+            df_chart[
+                "RPE planificado"
+            ] = (
+                pd.to_numeric(
+                    df_chart[
+                        "RPE planificado"
+                    ],
+                    errors="coerce"
+                )
             )
 
-            df_chart = df_chart.dropna(
-                subset=[
-                    "Alumno",
-                    "Semana",
+            df_chart[
+                "RPE real"
+            ] = (
+                pd.to_numeric(
+                    df_chart[
+                        "RPE real"
+                    ],
+                    errors="coerce"
+                )
+            )
+
+            df_chart = (
+                df_chart
+                .dropna(
+                    subset=[
+                        "Alumno",
+                        "Semana",
+                        "Dif. RPE"
+                    ]
+                )
+            )
+
+            df_chart[
+                "Dif. RPE"
+            ] = (
+                df_chart[
                     "Dif. RPE"
                 ]
+                .astype(
+                    float
+                )
             )
 
-            # Forzar tipo numérico normal
-            df_chart["Dif. RPE"] = (
-                df_chart["Dif. RPE"]
-                .astype(float)
-            )
-
-            # Convertir semana a categoría de texto
-            # Esto evita problemas cuando solo hay una semana
-            df_chart["Semana heatmap"] = (
-                df_chart["Semana"]
+            df_chart[
+                "Semana heatmap"
+            ] = (
+                df_chart[
+                    "Semana"
+                ]
                 .astype(int)
                 .astype(str)
             )
 
-            # Texto que aparecerá dentro de cada celda
-            df_chart["Δ RPE texto"] = (
-                df_chart["Dif. RPE"]
+            df_chart[
+                "Δ RPE texto"
+            ] = (
+                df_chart[
+                    "Dif. RPE"
+                ]
                 .map(
-                    lambda x: f"{x:+.1f}"
+                    lambda x:
+                        f"{x:+.1f}"
                 )
             )
-
-            # ---------------------------------------------
-            # HEATMAP BASE
-            # ---------------------------------------------
 
             heatmap_rpe = (
                 alt.Chart(
@@ -6129,7 +6472,6 @@ elif pagina == "Vista grupo":
                     cornerRadius=6
                 )
                 .encode(
-
                     x=alt.X(
                         "Semana heatmap:N",
                         title="Semana",
@@ -6156,7 +6498,6 @@ elif pagina == "Vista grupo":
                     ),
 
                     tooltip=[
-
                         alt.Tooltip(
                             "Alumno:N",
                             title="Atleta"
@@ -6200,20 +6541,18 @@ elif pagina == "Vista grupo":
                         alt.Tooltip(
                             "Nivel:N",
                             title="Nivel"
-                        )
+                        ),
                     ]
                 )
                 .properties(
                     height=max(
                         250,
-                        atletas_registrados * 55
+                        atletas_registrados
+                        *
+                        55
                     )
                 )
             )
-
-            # ---------------------------------------------
-            # VALOR DENTRO DE LA CELDA
-            # ---------------------------------------------
 
             texto_rpe = (
                 alt.Chart(
@@ -6225,7 +6564,6 @@ elif pagina == "Vista grupo":
                     color="white"
                 )
                 .encode(
-
                     x=alt.X(
                         "Semana heatmap:N",
                         sort=None
@@ -6242,20 +6580,11 @@ elif pagina == "Vista grupo":
                 )
             )
 
-            # ---------------------------------------------
-            # COMBINAR
-            # ---------------------------------------------
-
             grafica_final = (
                 heatmap_rpe
                 +
                 texto_rpe
             )
-
-
-        # =================================================
-        # MOSTRAR GRÁFICA
-        # =================================================
 
         if df_chart.empty:
 
@@ -6264,7 +6593,6 @@ elif pagina == "Vista grupo":
             )
 
         else:
-
             st.altair_chart(
                 grafica_final,
                 use_container_width=True
@@ -6274,9 +6602,6 @@ elif pagina == "Vista grupo":
                 f"Mostrando {len(df_chart)} registros "
                 f"de {df_chart['Alumno'].nunique()} atletas."
             )
-    # =====================================================
-    # PRIORIDADES DEL COACH
-    # =====================================================
 
     st.divider()
 
@@ -6300,7 +6625,11 @@ elif pagina == "Vista grupo":
 
     for _, fila in prioridad.iterrows():
 
-        nivel = fila["Nivel"]
+        nivel = (
+            fila[
+                "Nivel"
+            ]
+        )
 
         texto = (
             f"**{fila['Alumno']}** · "
@@ -6310,28 +6639,26 @@ elif pagina == "Vista grupo":
         )
 
         if nivel == "ALTA":
-
             st.error(
                 f"🔴 {texto}"
             )
 
         elif nivel == "REVISAR":
-
             st.warning(
                 f"🟠 {texto}"
             )
 
         elif nivel == "MONITOREAR":
-
             st.info(
                 f"🟡 {texto}"
             )
 
         else:
-
             st.success(
                 f"✅ {texto}"
             )
+
+
 # =========================================================
 # ALERTAS
 # =========================================================
@@ -6342,16 +6669,25 @@ elif pagina == "Alertas":
         "Alertas y recomendaciones"
     )
 
-    df_seguimiento = leer_hoja(
-        "Seguimiento por bloque"
+    df_seguimiento = (
+        leer_hoja(
+            "Seguimiento por bloque"
+        )
     )
 
-    bloque_alertas = st.selectbox(
-        "Bloque",
-        [1, 2, 3, 4],
-        index=None,
-        placeholder="Selecciona un bloque...",
-        key="bloque_alertas"
+    bloque_alertas = (
+        st.selectbox(
+            "Bloque",
+            [
+                1,
+                2,
+                3,
+                4
+            ],
+            index=None,
+            placeholder="Selecciona un bloque...",
+            key="bloque_alertas"
+        )
     )
 
     if bloque_alertas is None:
@@ -6386,11 +6722,13 @@ elif pagina == "Alertas":
 
     df_alertas[
         "Semana"
-    ] = pd.to_numeric(
-        df_alertas[
-            "Semana"
-        ],
-        errors="coerce"
+    ] = (
+        pd.to_numeric(
+            df_alertas[
+                "Semana"
+            ],
+            errors="coerce"
+        )
     )
 
     df_alertas = (
@@ -6402,20 +6740,26 @@ elif pagina == "Alertas":
             "Alumno",
             as_index=False
         )
-        .tail(1)
+        .tail(
+            1
+        )
     )
 
     for _, fila in df_alertas.iterrows():
 
-        alumno_alerta = limpiar_texto(
-            fila.get(
-                "Alumno"
+        alumno_alerta = (
+            limpiar_texto(
+                fila.get(
+                    "Alumno"
+                )
             )
         )
 
-        nivel = limpiar_texto(
-            fila.get(
-                "Nivel"
+        nivel = (
+            limpiar_texto(
+                fila.get(
+                    "Nivel"
+                )
             )
         )
 
@@ -6424,7 +6768,9 @@ elif pagina == "Alertas":
         ):
 
             col1, col2, col3 = (
-                st.columns(3)
+                st.columns(
+                    3
+                )
             )
 
             col1.metric(
