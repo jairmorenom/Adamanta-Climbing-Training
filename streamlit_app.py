@@ -2493,55 +2493,47 @@ elif pagina == "Planear sesión":
                             )
 
 
-                            ejercicios_fisicos.append(
-                                {
-                                    "Ejercicio":
-                                        ejercicio_fisico,
-
-                                    "Tipo":
-                                        tipo_fisico,
-
-                                    "Equipo":
-                                        equipo,
-
-                                    "Zona principal":
-                                        zona_principal,
-
-                                    "Series":
-                                        int(series),
-
-                                    "Repeticiones":
-                                        int(repeticiones),
-
-                                    "Carga externa":
-                                        float(carga_externa),
-
-                                    "RPE objetivo":
-                                        float(rpe_objetivo)
-                                }
-                            )
+                    ejercicios_fisicos.append(
+                        {
+                            "Ejercicio": ejercicio_fisico,
+                            "Tipo": tipo_fisico,
+                            "Equipo": equipo,
+                            "Zona principal": zona_principal,
+                            "Series": int(series),
+                            "Repeticiones": int(repeticiones),
+                            "Carga externa": float(carga_externa),
+                            "RPE objetivo": float(rpe_objetivo)
+                        }
+                    )
 
 
-                                # =================================================
-                # CALCULAR CARGA FÍSICA
+                # =================================================
+                # PASO 3A — CALCULAR CARGA FÍSICA
                 # =================================================
 
-                resultado_carga_fisica = (
-                    calcular_carga_fisica(
+                resultado_carga_fisica = calcular_carga_fisica(
+                    ejercicios_fisicos,
+                    momento_fisico,
+                    df_ejercicios_fisico,
+                    df_reglas_fisico
+                )
+
+
+                # =================================================
+                # GUARDAR ACONDICIONAMIENTO
+                # =================================================
+
+                acondicionamiento = {
+                    "Activo": True,
+                    "Tipo": tipo_fisico,
+                    "Momento": momento_fisico,
+                    "Factor momento":
+                        resultado_carga_fisica["Factor"],
+                    "Ejercicios":
                         ejercicios_fisicos,
-                        momento_fisico,
-                        df_ejercicios_fisico,
-                        df_reglas_fisico
-                    )
-                )
-
-
-                carga_por_zona = (
-                    resultado_carga_fisica[
-                        "Resultados"
-                    ]
-                )
-
+                    "Carga por zona":
+                        resultado_carga_fisica["Resultados"]
+                }
 
                 # =================================================
                 # GUARDAR ACONDICIONAMIENTO
@@ -2560,7 +2552,17 @@ elif pagina == "Planear sesión":
                     "Carga por zona":
                         carga_por_zona
                 }
+                # =================================================
+                # DEBUG TEMPORAL PASO 3A
+                # =================================================
 
+                st.write(
+                    "DEBUG CARGA FÍSICA"
+                )
+
+                st.json(
+                    resultado_carga_fisica
+                )
 
                 # =================================================
                 # RESUMEN
