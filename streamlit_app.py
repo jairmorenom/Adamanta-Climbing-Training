@@ -2327,20 +2327,6 @@ elif pagina == "Planear sesión":
                 "Sesión lista para registrar."
             )
 
-            # =================================================
-            # DEBUG TEMPORAL
-            # =================================================
-
-            st.write(
-                "DEBUG SESIÓN PLANIFICADA"
-            )
-
-            st.json(
-                st.session_state[
-                    "sesion_planificada"
-                ]
-            )
-            
 # =========================================================
 # ACONDICIONAMIENTO FÍSICO
 # =========================================================
