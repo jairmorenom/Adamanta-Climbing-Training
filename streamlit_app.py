@@ -2275,7 +2275,6 @@ elif pagina == "Planear sesión":
                             f"RPE {ejercicio['RPE objetivo']:.1f}"
                         )
 
-
         # =====================================================
         # GUARDAR SESIÓN COMPLETA
         # =====================================================
@@ -2327,13 +2326,21 @@ elif pagina == "Planear sesión":
             st.success(
                 "Sesión lista para registrar."
             )
-            st.write("DEBUG SESIÓN PLANIFICADA")
 
-st.json(
-    st.session_state[
-        "sesion_planificada"
-    ]
-)
+            # =================================================
+            # DEBUG TEMPORAL
+            # =================================================
+
+            st.write(
+                "DEBUG SESIÓN PLANIFICADA"
+            )
+
+            st.json(
+                st.session_state[
+                    "sesion_planificada"
+                ]
+            )
+            
 # =========================================================
 # ACONDICIONAMIENTO FÍSICO
 # =========================================================
