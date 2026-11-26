@@ -11625,6 +11625,836 @@ elif pagina == "Vista grupo":
             st.success(
                 f"✅ {texto}"
             )
+                # =========================================================
+    # PASO 6A — DASHBOARD FÍSICO DEL GRUPO
+    # =========================================================
+
+    st.divider()
+
+    st.header(
+        "Acondicionamiento físico del grupo"
+    )
+
+    st.caption(
+        "Resumen del trabajo físico realizado por todos "
+        "los atletas del bloque seleccionado."
+    )
+
+
+    try:
+
+        # =====================================================
+        # LEER HISTORIAL FÍSICO
+        # =====================================================
+
+        df_fisico_grupo = leer_hoja(
+            HOJAS_FISICO["historial"],
+            SPREADSHEET_ID_FISICO
+        )
+
+
+        if df_fisico_grupo.empty:
+
+            st.info(
+                "Todavía no existen registros de "
+                "acondicionamiento físico."
+            )
+
+
+        else:
+
+            # =================================================
+            # LIMPIAR DATOS
+            # =================================================
+
+            columnas_numericas_grupo = [
+                "Semana",
+                "Sesión",
+                "Series planificadas",
+                "Series reales",
+                "Repeticiones planificadas",
+                "Repeticiones reales",
+                "Carga externa planificada",
+                "Carga externa real",
+                "RPE planificado",
+                "RPE real",
+                "Dedos",
+                "Antebrazo / muñeca",
+                "Tracción (espalda/bíceps)",
+                "Empuje (pecho/tríceps)",
+                "Hombro",
+                "Core",
+                "Piernas / cadera",
+                "Puntaje interferencia"
+            ]
+
+
+            for columna in columnas_numericas_grupo:
+
+                if columna in df_fisico_grupo.columns:
+
+                    df_fisico_grupo[
+                        columna
+                    ] = pd.to_numeric(
+                        df_fisico_grupo[
+                            columna
+                        ],
+                        errors="coerce"
+                    )
+
+
+            df_fisico_grupo = (
+                df_fisico_grupo
+                .dropna(
+                    subset=[
+                        "Semana",
+                        "Sesión",
+                        "Alumno",
+                        "Ejercicio"
+                    ]
+                )
+                .copy()
+            )
+
+
+            df_fisico_grupo[
+                "Alumno"
+            ] = (
+                df_fisico_grupo[
+                    "Alumno"
+                ]
+                .astype(str)
+                .str.strip()
+            )
+
+
+            # =================================================
+            # BLOQUE
+            # =================================================
+
+            df_fisico_grupo[
+                "Bloque"
+            ] = (
+                df_fisico_grupo[
+                    "Semana"
+                ]
+                .apply(
+                    lambda semana:
+                        obtener_bloque(
+                            int(semana)
+                        )[0]
+                )
+            )
+
+
+            bloque_grupo_fisico = st.selectbox(
+                "Bloque físico",
+                [
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                key="bloque_grupo_fisico"
+            )
+
+
+            df_fisico_bloque = (
+                df_fisico_grupo[
+                    df_fisico_grupo[
+                        "Bloque"
+                    ]
+                    ==
+                    bloque_grupo_fisico
+                ]
+                .copy()
+            )
+
+
+            if df_fisico_bloque.empty:
+
+                st.info(
+                    "No existen registros físicos "
+                    "para este bloque."
+                )
+
+
+            else:
+
+                # =============================================
+                # NOMBRE DEL BLOQUE
+                # =============================================
+
+                semanas_bloque = {
+                    1: (1, 13),
+                    2: (14, 26),
+                    3: (27, 39),
+                    4: (40, 52)
+                }
+
+
+                semana_inicio, semana_fin = (
+                    semanas_bloque[
+                        bloque_grupo_fisico
+                    ]
+                )
+
+
+                _, nombre_bloque_grupo = (
+                    obtener_bloque(
+                        semana_inicio
+                    )
+                )
+
+
+                st.caption(
+                    f"Bloque {bloque_grupo_fisico} · "
+                    f"{nombre_bloque_grupo} · "
+                    f"Semanas {semana_inicio}–{semana_fin}"
+                )
+
+
+                # =============================================
+                # CARGA TOTAL POR REGISTRO
+                # =============================================
+
+                zonas_grupo_fisico = [
+                    "Dedos",
+                    "Antebrazo / muñeca",
+                    "Tracción (espalda/bíceps)",
+                    "Empuje (pecho/tríceps)",
+                    "Hombro",
+                    "Core",
+                    "Piernas / cadera"
+                ]
+
+
+                df_fisico_bloque[
+                    "Carga física total"
+                ] = (
+                    df_fisico_bloque[
+                        zonas_grupo_fisico
+                    ]
+                    .fillna(0)
+                    .sum(
+                        axis=1
+                    )
+                )
+
+
+                # =============================================
+                # SESIONES ÚNICAS
+                # =============================================
+
+                sesiones_unicas_grupo = (
+                    df_fisico_bloque[
+                        [
+                            "Alumno",
+                            "Semana",
+                            "Sesión"
+                        ]
+                    ]
+                    .drop_duplicates()
+                )
+
+
+                total_sesiones_grupo = len(
+                    sesiones_unicas_grupo
+                )
+
+
+                total_alumnos_grupo = (
+                    df_fisico_bloque[
+                        "Alumno"
+                    ]
+                    .nunique()
+                )
+
+
+                carga_total_grupo = (
+                    df_fisico_bloque[
+                        "Carga física total"
+                    ]
+                    .sum()
+                )
+
+
+                rpe_medio_grupo = (
+                    df_fisico_bloque[
+                        "RPE real"
+                    ]
+                    .mean()
+                )
+
+
+                # =============================================
+                # ALTA INTERFERENCIA
+                # Evitamos contar cada ejercicio como sesión.
+                # =============================================
+
+                sesiones_alta_interferencia = (
+                    df_fisico_bloque[
+                        df_fisico_bloque[
+                            "Compatibilidad"
+                        ]
+                        ==
+                        "ALTA INTERFERENCIA"
+                    ]
+                    [
+                        [
+                            "Alumno",
+                            "Semana",
+                            "Sesión"
+                        ]
+                    ]
+                    .drop_duplicates()
+                    .shape[0]
+                )
+
+
+                # =============================================
+                # KPIs DEL GRUPO
+                # =============================================
+
+                st.subheader(
+                    "Resumen del grupo"
+                )
+
+
+                col_g1, col_g2, col_g3, col_g4, col_g5 = (
+                    st.columns(5)
+                )
+
+
+                col_g1.metric(
+                    "Atletas",
+                    total_alumnos_grupo
+                )
+
+
+                col_g2.metric(
+                    "Sesiones físicas",
+                    total_sesiones_grupo
+                )
+
+
+                col_g3.metric(
+                    "Carga física",
+                    f"{carga_total_grupo:.1f}"
+                )
+
+
+                col_g4.metric(
+                    "RPE medio",
+                    f"{rpe_medio_grupo:.1f}"
+                )
+
+
+                col_g5.metric(
+                    "Alta interferencia",
+                    sesiones_alta_interferencia
+                )
+
+
+                # =============================================
+                # RESUMEN INDIVIDUAL
+                # =============================================
+
+                resumen_alumnos_fisico = []
+
+
+                alumnos_fisico_grupo = sorted(
+                    df_fisico_bloque[
+                        "Alumno"
+                    ]
+                    .dropna()
+                    .unique()
+                    .tolist()
+                )
+
+
+                for alumno in alumnos_fisico_grupo:
+
+                    df_alumno_grupo = (
+                        df_fisico_bloque[
+                            df_fisico_bloque[
+                                "Alumno"
+                            ]
+                            ==
+                            alumno
+                        ]
+                        .copy()
+                    )
+
+
+                    # -----------------------------------------
+                    # SESIONES
+                    # -----------------------------------------
+
+                    sesiones_alumno = (
+                        df_alumno_grupo[
+                            [
+                                "Semana",
+                                "Sesión"
+                            ]
+                        ]
+                        .drop_duplicates()
+                        .shape[0]
+                    )
+
+
+                    semanas_alumno = (
+                        df_alumno_grupo[
+                            "Semana"
+                        ]
+                        .nunique()
+                    )
+
+
+                    ejercicios_alumno = (
+                        df_alumno_grupo[
+                            "Ejercicio"
+                        ]
+                        .nunique()
+                    )
+
+
+                    # -----------------------------------------
+                    # CARGA
+                    # -----------------------------------------
+
+                    carga_alumno = (
+                        df_alumno_grupo[
+                            "Carga física total"
+                        ]
+                        .sum()
+                    )
+
+
+                    if semanas_alumno > 0:
+
+                        carga_media_semanal = (
+                            carga_alumno
+                            /
+                            semanas_alumno
+                        )
+
+                    else:
+
+                        carga_media_semanal = 0
+
+
+                    # -----------------------------------------
+                    # RPE
+                    # -----------------------------------------
+
+                    rpe_alumno = (
+                        df_alumno_grupo[
+                            "RPE real"
+                        ]
+                        .mean()
+                    )
+
+
+                    # -----------------------------------------
+                    # SERIES
+                    # -----------------------------------------
+
+                    series_plan_alumno = (
+                        df_alumno_grupo[
+                            "Series planificadas"
+                        ]
+                        .sum()
+                    )
+
+
+                    series_real_alumno = (
+                        df_alumno_grupo[
+                            "Series reales"
+                        ]
+                        .sum()
+                    )
+
+
+                    if series_plan_alumno > 0:
+
+                        cumplimiento_series = (
+                            series_real_alumno
+                            /
+                            series_plan_alumno
+                            *
+                            100
+                        )
+
+                    else:
+
+                        cumplimiento_series = 0
+
+
+                    # -----------------------------------------
+                    # REPETICIONES
+                    # -----------------------------------------
+
+                    reps_plan_alumno = (
+                        df_alumno_grupo[
+                            "Repeticiones planificadas"
+                        ]
+                        .sum()
+                    )
+
+
+                    reps_real_alumno = (
+                        df_alumno_grupo[
+                            "Repeticiones reales"
+                        ]
+                        .sum()
+                    )
+
+
+                    if reps_plan_alumno > 0:
+
+                        cumplimiento_reps = (
+                            reps_real_alumno
+                            /
+                            reps_plan_alumno
+                            *
+                            100
+                        )
+
+                    else:
+
+                        cumplimiento_reps = 0
+
+
+                    # -----------------------------------------
+                    # ZONA MÁS CARGADA
+                    # -----------------------------------------
+
+                    carga_zonas_alumno = (
+                        df_alumno_grupo[
+                            zonas_grupo_fisico
+                        ]
+                        .fillna(0)
+                        .sum()
+                    )
+
+
+                    if carga_zonas_alumno.sum() > 0:
+
+                        zona_dominante = (
+                            carga_zonas_alumno
+                            .idxmax()
+                        )
+
+                        carga_zona_dominante = (
+                            carga_zonas_alumno
+                            .max()
+                        )
+
+                    else:
+
+                        zona_dominante = "-"
+                        carga_zona_dominante = 0
+
+
+                    # -----------------------------------------
+                    # INTERFERENCIA
+                    # -----------------------------------------
+
+                    df_sesiones_alumno = (
+                        df_alumno_grupo[
+                            [
+                                "Semana",
+                                "Sesión",
+                                "Compatibilidad",
+                                "Puntaje interferencia"
+                            ]
+                        ]
+                        .drop_duplicates(
+                            subset=[
+                                "Semana",
+                                "Sesión"
+                            ]
+                        )
+                    )
+
+
+                    altas_alumno = int(
+                        (
+                            df_sesiones_alumno[
+                                "Compatibilidad"
+                            ]
+                            ==
+                            "ALTA INTERFERENCIA"
+                        )
+                        .sum()
+                    )
+
+
+                    revisar_alumno = int(
+                        (
+                            df_sesiones_alumno[
+                                "Compatibilidad"
+                            ]
+                            ==
+                            "REVISAR"
+                        )
+                        .sum()
+                    )
+
+
+                    interferencia_media = (
+                        df_sesiones_alumno[
+                            "Puntaje interferencia"
+                        ]
+                        .mean()
+                    )
+
+
+                    resumen_alumnos_fisico.append(
+                        {
+                            "Alumno":
+                                alumno,
+
+                            "Semanas":
+                                int(semanas_alumno),
+
+                            "Sesiones":
+                                int(sesiones_alumno),
+
+                            "Ejercicios":
+                                int(ejercicios_alumno),
+
+                            "Carga física":
+                                round(
+                                    carga_alumno,
+                                    1
+                                ),
+
+                            "Carga semanal media":
+                                round(
+                                    carga_media_semanal,
+                                    1
+                                ),
+
+                            "RPE medio":
+                                round(
+                                    rpe_alumno,
+                                    1
+                                ),
+
+                            "Series %":
+                                round(
+                                    cumplimiento_series,
+                                    1
+                                ),
+
+                            "Reps %":
+                                round(
+                                    cumplimiento_reps,
+                                    1
+                                ),
+
+                            "Zona dominante":
+                                zona_dominante,
+
+                            "Carga zona dominante":
+                                round(
+                                    carga_zona_dominante,
+                                    1
+                                ),
+
+                            "Revisar":
+                                revisar_alumno,
+
+                            "Alta interferencia":
+                                altas_alumno,
+
+                            "Interferencia media":
+                                round(
+                                    interferencia_media,
+                                    1
+                                )
+                        }
+                    )
+
+
+                # =============================================
+                # DATAFRAME FINAL
+                # =============================================
+
+                df_resumen_fisico_grupo = pd.DataFrame(
+                    resumen_alumnos_fisico
+                )
+
+
+                df_resumen_fisico_grupo = (
+                    df_resumen_fisico_grupo
+                    .sort_values(
+                        "Carga física",
+                        ascending=False
+                    )
+                    .reset_index(
+                        drop=True
+                    )
+                )
+
+
+                # =============================================
+                # GRÁFICA CARGA POR ATLETA
+                # =============================================
+
+                st.subheader(
+                    "Carga física por atleta"
+                )
+
+
+                grafica_carga_grupo = (
+                    alt.Chart(
+                        df_resumen_fisico_grupo
+                    )
+                    .mark_bar()
+                    .encode(
+
+                        x=alt.X(
+                            "Carga física:Q",
+                            title="Carga física"
+                        ),
+
+                        y=alt.Y(
+                            "Alumno:N",
+                            title="",
+                            sort="-x"
+                        ),
+
+                        tooltip=[
+                            alt.Tooltip(
+                                "Alumno:N",
+                                title="Alumno"
+                            ),
+
+                            alt.Tooltip(
+                                "Carga física:Q",
+                                title="Carga",
+                                format=".1f"
+                            ),
+
+                            alt.Tooltip(
+                                "Sesiones:Q",
+                                title="Sesiones"
+                            ),
+
+                            alt.Tooltip(
+                                "RPE medio:Q",
+                                title="RPE",
+                                format=".1f"
+                            ),
+
+                            alt.Tooltip(
+                                "Zona dominante:N",
+                                title="Zona dominante"
+                            )
+                        ]
+                    )
+                    .properties(
+                        height=max(
+                            300,
+                            len(
+                                df_resumen_fisico_grupo
+                            )
+                            *
+                            35
+                        )
+                    )
+                )
+
+
+                st.altair_chart(
+                    grafica_carga_grupo,
+                    use_container_width=True
+                )
+
+
+                # =============================================
+                # RPE POR ATLETA
+                # =============================================
+
+                st.subheader(
+                    "RPE físico medio"
+                )
+
+
+                grafica_rpe_grupo = (
+                    alt.Chart(
+                        df_resumen_fisico_grupo
+                    )
+                    .mark_bar()
+                    .encode(
+
+                        x=alt.X(
+                            "RPE medio:Q",
+                            title="RPE medio",
+                            scale=alt.Scale(
+                                domain=[
+                                    0,
+                                    10
+                                ]
+                            )
+                        ),
+
+                        y=alt.Y(
+                            "Alumno:N",
+                            title="",
+                            sort="-x"
+                        ),
+
+                        tooltip=[
+                            "Alumno:N",
+
+                            alt.Tooltip(
+                                "RPE medio:Q",
+                                format=".1f"
+                            ),
+
+                            alt.Tooltip(
+                                "Carga física:Q",
+                                format=".1f"
+                            )
+                        ]
+                    )
+                    .properties(
+                        height=max(
+                            300,
+                            len(
+                                df_resumen_fisico_grupo
+                            )
+                            *
+                            35
+                        )
+                    )
+                )
+
+
+                st.altair_chart(
+                    grafica_rpe_grupo,
+                    use_container_width=True
+                )
+
+
+                # =============================================
+                # TABLA COMPLETA
+                # =============================================
+
+                st.subheader(
+                    "Resumen por atleta"
+                )
+
+
+                st.dataframe(
+                    df_resumen_fisico_grupo,
+                    use_container_width=True,
+                    hide_index=True
+                )
 
 
 # =========================================================
