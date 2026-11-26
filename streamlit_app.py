@@ -13088,6 +13088,874 @@ elif pagina == "Vista grupo":
                     matriz_heatmap,
                     use_container_width=True
                 )
+                                # =========================================================
+                # PASO 6C — ALERTAS FÍSICAS AUTOMÁTICAS
+                # =========================================================
+
+                st.divider()
+
+                st.header(
+                    "Alertas físicas automáticas"
+                )
+
+                st.caption(
+                    "Las alertas ayudan a detectar patrones que conviene "
+                    "revisar. No sustituyen la valoración del coach."
+                )
+
+
+                # =========================================================
+                # CONFIGURACIÓN DE UMBRALES
+                # =========================================================
+
+                UMBRAL_RPE_ALTO = 8.5
+
+                UMBRAL_CUMPLIMIENTO_BAJO = 80
+
+                UMBRAL_CUMPLIMIENTO_ALTO = 120
+
+                UMBRAL_AUMENTO_CARGA = 30
+
+                UMBRAL_AUMENTO_CARGA_ALTO = 50
+
+                SEMANAS_ZONA_REPETIDA = 3
+
+
+                # =========================================================
+                # CONTENEDOR DE ALERTAS
+                # =========================================================
+
+                alertas_fisicas = []
+
+
+                # =========================================================
+                # ANALIZAR CADA ALUMNO
+                # =========================================================
+
+                for alumno_alerta in alumnos_fisico_grupo:
+
+                    df_alerta_alumno = (
+                        df_fisico_bloque[
+                            df_fisico_bloque[
+                                "Alumno"
+                            ]
+                            ==
+                            alumno_alerta
+                        ]
+                        .copy()
+                    )
+
+
+                    alertas_alumno = []
+
+
+                    # =====================================================
+                    # 1. RPE FÍSICO ALTO
+                    # =====================================================
+
+                    rpe_medio_alerta = (
+                        df_alerta_alumno[
+                            "RPE real"
+                        ]
+                        .mean()
+                    )
+
+
+                    if (
+                        pd.notna(
+                            rpe_medio_alerta
+                        )
+                        and
+                        rpe_medio_alerta
+                        >=
+                        UMBRAL_RPE_ALTO
+                    ):
+
+                        alertas_alumno.append(
+                            {
+                                "Nivel": "REVISAR",
+                                "Tipo": "RPE alto",
+                                "Detalle": (
+                                    f"RPE físico medio "
+                                    f"{rpe_medio_alerta:.1f}."
+                                )
+                            }
+                        )
+
+
+                    # =====================================================
+                    # 2. ALTA INTERFERENCIA
+                    # =====================================================
+
+                    sesiones_alerta_alumno = (
+                        df_alerta_alumno[
+                            [
+                                "Semana",
+                                "Sesión",
+                                "Compatibilidad",
+                                "Puntaje interferencia"
+                            ]
+                        ]
+                        .drop_duplicates(
+                            subset=[
+                                "Semana",
+                                "Sesión"
+                            ]
+                        )
+                    )
+
+
+                    sesiones_alta_alerta = (
+                        sesiones_alerta_alumno[
+                            sesiones_alerta_alumno[
+                                "Compatibilidad"
+                            ]
+                            ==
+                            "ALTA INTERFERENCIA"
+                        ]
+                    )
+
+
+                    cantidad_alta_alerta = len(
+                        sesiones_alta_alerta
+                    )
+
+
+                    if cantidad_alta_alerta >= 2:
+
+                        alertas_alumno.append(
+                            {
+                                "Nivel": "ALTA",
+                                "Tipo": "Interferencia",
+                                "Detalle": (
+                                    f"{cantidad_alta_alerta} sesiones "
+                                    "con ALTA INTERFERENCIA."
+                                )
+                            }
+                        )
+
+
+                    elif cantidad_alta_alerta == 1:
+
+                        alertas_alumno.append(
+                            {
+                                "Nivel": "REVISAR",
+                                "Tipo": "Interferencia",
+                                "Detalle": (
+                                    "1 sesión con "
+                                    "ALTA INTERFERENCIA."
+                                )
+                            }
+                        )
+
+
+                    # =====================================================
+                    # 3. CUMPLIMIENTO DE SERIES
+                    # =====================================================
+
+                    series_plan_alerta = (
+                        df_alerta_alumno[
+                            "Series planificadas"
+                        ]
+                        .sum()
+                    )
+
+
+                    series_real_alerta = (
+                        df_alerta_alumno[
+                            "Series reales"
+                        ]
+                        .sum()
+                    )
+
+
+                    if series_plan_alerta > 0:
+
+                        cumplimiento_series_alerta = (
+                            series_real_alerta
+                            /
+                            series_plan_alerta
+                            *
+                            100
+                        )
+
+                    else:
+
+                        cumplimiento_series_alerta = 0
+
+
+                    if (
+                        series_plan_alerta > 0
+                        and
+                        cumplimiento_series_alerta
+                        >
+                        UMBRAL_CUMPLIMIENTO_ALTO
+                    ):
+
+                        alertas_alumno.append(
+                            {
+                                "Nivel": "REVISAR",
+                                "Tipo": "Series",
+                                "Detalle": (
+                                    f"Series realizadas al "
+                                    f"{cumplimiento_series_alerta:.0f}% "
+                                    "de lo planificado."
+                                )
+                            }
+                        )
+
+
+                    elif (
+                        series_plan_alerta > 0
+                        and
+                        cumplimiento_series_alerta
+                        <
+                        UMBRAL_CUMPLIMIENTO_BAJO
+                    ):
+
+                        alertas_alumno.append(
+                            {
+                                "Nivel": "MONITOREAR",
+                                "Tipo": "Series",
+                                "Detalle": (
+                                    f"Solo se completó el "
+                                    f"{cumplimiento_series_alerta:.0f}% "
+                                    "de las series planificadas."
+                                )
+                            }
+                        )
+
+
+                    # =====================================================
+                    # 4. CUMPLIMIENTO DE REPETICIONES
+                    # =====================================================
+
+                    reps_plan_alerta = (
+                        df_alerta_alumno[
+                            "Repeticiones planificadas"
+                        ]
+                        .sum()
+                    )
+
+
+                    reps_real_alerta = (
+                        df_alerta_alumno[
+                            "Repeticiones reales"
+                        ]
+                        .sum()
+                    )
+
+
+                    if reps_plan_alerta > 0:
+
+                        cumplimiento_reps_alerta = (
+                            reps_real_alerta
+                            /
+                            reps_plan_alerta
+                            *
+                            100
+                        )
+
+                    else:
+
+                        cumplimiento_reps_alerta = 0
+
+
+                    if (
+                        reps_plan_alerta > 0
+                        and
+                        cumplimiento_reps_alerta
+                        >
+                        UMBRAL_CUMPLIMIENTO_ALTO
+                    ):
+
+                        alertas_alumno.append(
+                            {
+                                "Nivel": "REVISAR",
+                                "Tipo": "Repeticiones",
+                                "Detalle": (
+                                    f"Repeticiones realizadas al "
+                                    f"{cumplimiento_reps_alerta:.0f}% "
+                                    "de lo planificado."
+                                )
+                            }
+                        )
+
+
+                    elif (
+                        reps_plan_alerta > 0
+                        and
+                        cumplimiento_reps_alerta
+                        <
+                        UMBRAL_CUMPLIMIENTO_BAJO
+                    ):
+
+                        alertas_alumno.append(
+                            {
+                                "Nivel": "MONITOREAR",
+                                "Tipo": "Repeticiones",
+                                "Detalle": (
+                                    f"Solo se completó el "
+                                    f"{cumplimiento_reps_alerta:.0f}% "
+                                    "de las repeticiones planificadas."
+                                )
+                            }
+                        )
+
+
+                    # =====================================================
+                    # 5. CARGA SEMANAL
+                    # =====================================================
+
+                    carga_semanal_alerta = (
+                        df_alerta_alumno
+                        .groupby(
+                            "Semana",
+                            as_index=False
+                        )[
+                            "Carga física total"
+                        ]
+                        .sum()
+                        .sort_values(
+                            "Semana"
+                        )
+                    )
+
+
+                    carga_semanal_alerta[
+                        "Carga anterior"
+                    ] = (
+                        carga_semanal_alerta[
+                            "Carga física total"
+                        ]
+                        .shift(1)
+                    )
+
+
+                    carga_semanal_alerta[
+                        "Cambio %"
+                    ] = (
+                        (
+                            carga_semanal_alerta[
+                                "Carga física total"
+                            ]
+                            -
+                            carga_semanal_alerta[
+                                "Carga anterior"
+                            ]
+                        )
+                        /
+                        carga_semanal_alerta[
+                            "Carga anterior"
+                        ]
+                        *
+                        100
+                    )
+
+
+                    aumentos_validos = (
+                        carga_semanal_alerta[
+                            (
+                                carga_semanal_alerta[
+                                    "Carga anterior"
+                                ]
+                                >
+                                0
+                            )
+                            &
+                            (
+                                carga_semanal_alerta[
+                                    "Cambio %"
+                                ]
+                                >
+                                UMBRAL_AUMENTO_CARGA
+                            )
+                        ]
+                    )
+
+
+                    if not aumentos_validos.empty:
+
+                        aumento_maximo = (
+                            aumentos_validos[
+                                "Cambio %"
+                            ]
+                            .max()
+                        )
+
+
+                        semana_aumento_maximo = int(
+                            aumentos_validos.loc[
+                                aumentos_validos[
+                                    "Cambio %"
+                                ]
+                                .idxmax(),
+                                "Semana"
+                            ]
+                        )
+
+
+                        if (
+                            aumento_maximo
+                            >=
+                            UMBRAL_AUMENTO_CARGA_ALTO
+                        ):
+
+                            nivel_aumento = "ALTA"
+
+                        else:
+
+                            nivel_aumento = "REVISAR"
+
+
+                        alertas_alumno.append(
+                            {
+                                "Nivel":
+                                    nivel_aumento,
+
+                                "Tipo":
+                                    "Aumento de carga",
+
+                                "Detalle":
+                                    (
+                                        f"La carga física aumentó "
+                                        f"{aumento_maximo:.0f}% en la "
+                                        f"semana {semana_aumento_maximo}."
+                                    )
+                            }
+                        )
+
+
+                    # =====================================================
+                    # 6. ZONA DOMINANTE REPETIDA
+                    # =====================================================
+
+                    zonas_por_semana = (
+                        df_alerta_alumno
+                        .groupby(
+                            "Semana"
+                        )[
+                            zonas_grupo_fisico
+                        ]
+                        .sum()
+                        .sort_index()
+                    )
+
+
+                    if not zonas_por_semana.empty:
+
+                        zona_dominante_semana = (
+                            zonas_por_semana
+                            .idxmax(
+                                axis=1
+                            )
+                        )
+
+
+                        carga_maxima_semana = (
+                            zonas_por_semana
+                            .max(
+                                axis=1
+                            )
+                        )
+
+
+                        zona_dominante_semana = (
+                            zona_dominante_semana[
+                                carga_maxima_semana
+                                >
+                                0
+                            ]
+                        )
+
+
+                        max_consecutivas = 0
+                        zona_consecutiva = None
+
+                        zona_anterior = None
+                        contador_zona = 0
+
+
+                        for zona_actual in (
+                            zona_dominante_semana
+                        ):
+
+                            if (
+                                zona_actual
+                                ==
+                                zona_anterior
+                            ):
+
+                                contador_zona += 1
+
+                            else:
+
+                                contador_zona = 1
+
+
+                            if (
+                                contador_zona
+                                >
+                                max_consecutivas
+                            ):
+
+                                max_consecutivas = (
+                                    contador_zona
+                                )
+
+                                zona_consecutiva = (
+                                    zona_actual
+                                )
+
+
+                            zona_anterior = (
+                                zona_actual
+                            )
+
+
+                        if (
+                            max_consecutivas
+                            >=
+                            SEMANAS_ZONA_REPETIDA
+                        ):
+
+                            alertas_alumno.append(
+                                {
+                                    "Nivel":
+                                        "MONITOREAR",
+
+                                    "Tipo":
+                                        "Zona repetida",
+
+                                    "Detalle":
+                                        (
+                                            f"{zona_consecutiva} fue la "
+                                            "zona dominante durante "
+                                            f"{max_consecutivas} semanas "
+                                            "consecutivas."
+                                        )
+                                }
+                            )
+
+
+                    # =====================================================
+                    # AGREGAR ALERTAS DEL ALUMNO
+                    # =====================================================
+
+                    if alertas_alumno:
+
+                        for alerta in alertas_alumno:
+
+                            alertas_fisicas.append(
+                                {
+                                    "Alumno":
+                                        alumno_alerta,
+
+                                    "Nivel":
+                                        alerta[
+                                            "Nivel"
+                                        ],
+
+                                    "Tipo":
+                                        alerta[
+                                            "Tipo"
+                                        ],
+
+                                    "Detalle":
+                                        alerta[
+                                            "Detalle"
+                                        ]
+                                }
+                            )
+
+
+                    else:
+
+                        alertas_fisicas.append(
+                            {
+                                "Alumno":
+                                    alumno_alerta,
+
+                                "Nivel":
+                                    "OK",
+
+                                "Tipo":
+                                    "Sin alertas",
+
+                                "Detalle":
+                                    (
+                                        "No se detectaron patrones "
+                                        "que requieran revisión."
+                                    )
+                            }
+                        )
+
+
+                # =========================================================
+                # DATAFRAME
+                # =========================================================
+
+                df_alertas_fisicas = pd.DataFrame(
+                    alertas_fisicas
+                )
+
+
+                # =========================================================
+                # CONTADORES
+                # =========================================================
+
+                total_alertas_altas = int(
+                    (
+                        df_alertas_fisicas[
+                            "Nivel"
+                        ]
+                        ==
+                        "ALTA"
+                    )
+                    .sum()
+                )
+
+
+                total_alertas_revisar = int(
+                    (
+                        df_alertas_fisicas[
+                            "Nivel"
+                        ]
+                        ==
+                        "REVISAR"
+                    )
+                    .sum()
+                )
+
+
+                total_alertas_monitorear = int(
+                    (
+                        df_alertas_fisicas[
+                            "Nivel"
+                        ]
+                        ==
+                        "MONITOREAR"
+                    )
+                    .sum()
+                )
+
+
+                alumnos_sin_alertas = (
+                    df_alertas_fisicas[
+                        df_alertas_fisicas[
+                            "Nivel"
+                        ]
+                        ==
+                        "OK"
+                    ][
+                        "Alumno"
+                    ]
+                    .nunique()
+                )
+
+
+                # =========================================================
+                # RESUMEN
+                # =========================================================
+
+                st.subheader(
+                    "Resumen de alertas"
+                )
+
+
+                col_a1, col_a2, col_a3, col_a4 = (
+                    st.columns(4)
+                )
+
+
+                col_a1.metric(
+                    "🔴 Alta",
+                    total_alertas_altas
+                )
+
+
+                col_a2.metric(
+                    "🟠 Revisar",
+                    total_alertas_revisar
+                )
+
+
+                col_a3.metric(
+                    "🟡 Monitorear",
+                    total_alertas_monitorear
+                )
+
+
+                col_a4.metric(
+                    "✅ Sin alertas",
+                    alumnos_sin_alertas
+                )
+
+
+                # =========================================================
+                # MOSTRAR ALERTAS POR ATLETA
+                # =========================================================
+
+                st.subheader(
+                    "Alertas por atleta"
+                )
+
+
+                orden_nivel_alerta = {
+                    "ALTA": 1,
+                    "REVISAR": 2,
+                    "MONITOREAR": 3,
+                    "OK": 4
+                }
+
+
+                df_alertas_fisicas[
+                    "Orden"
+                ] = (
+                    df_alertas_fisicas[
+                        "Nivel"
+                    ]
+                    .map(
+                        orden_nivel_alerta
+                    )
+                )
+
+
+                df_alertas_fisicas = (
+                    df_alertas_fisicas
+                    .sort_values(
+                        [
+                            "Orden",
+                            "Alumno"
+                        ]
+                    )
+                )
+
+
+                for alumno_alerta_visual in (
+                    df_alertas_fisicas[
+                        "Alumno"
+                    ]
+                    .unique()
+                ):
+
+                    alertas_visual = (
+                        df_alertas_fisicas[
+                            df_alertas_fisicas[
+                                "Alumno"
+                            ]
+                            ==
+                            alumno_alerta_visual
+                        ]
+                    )
+
+
+                    nivel_maximo = (
+                        alertas_visual[
+                            "Orden"
+                        ]
+                        .min()
+                    )
+
+
+                    if nivel_maximo == 1:
+
+                        icono_alerta = "🔴"
+
+                    elif nivel_maximo == 2:
+
+                        icono_alerta = "🟠"
+
+                    elif nivel_maximo == 3:
+
+                        icono_alerta = "🟡"
+
+                    else:
+
+                        icono_alerta = "✅"
+
+
+                    with st.expander(
+                        f"{icono_alerta} "
+                        f"{alumno_alerta_visual}"
+                    ):
+
+                        for _, fila_alerta in (
+                            alertas_visual.iterrows()
+                        ):
+
+                            if (
+                                fila_alerta[
+                                    "Nivel"
+                                ]
+                                ==
+                                "ALTA"
+                            ):
+
+                                st.error(
+                                    f"{fila_alerta['Tipo']} — "
+                                    f"{fila_alerta['Detalle']}"
+                                )
+
+
+                            elif (
+                                fila_alerta[
+                                    "Nivel"
+                                ]
+                                ==
+                                "REVISAR"
+                            ):
+
+                                st.warning(
+                                    f"{fila_alerta['Tipo']} — "
+                                    f"{fila_alerta['Detalle']}"
+                                )
+
+
+                            elif (
+                                fila_alerta[
+                                    "Nivel"
+                                ]
+                                ==
+                                "MONITOREAR"
+                            ):
+
+                                st.info(
+                                    f"{fila_alerta['Tipo']} — "
+                                    f"{fila_alerta['Detalle']}"
+                                )
+
+
+                            else:
+
+                                st.success(
+                                    fila_alerta[
+                                        "Detalle"
+                                    ]
+                                )
+
+
+                # =========================================================
+                # TABLA COMPLETA
+                # =========================================================
+
+                st.subheader(
+                    "Registro de alertas"
+                )
+
+
+                st.dataframe(
+                    df_alertas_fisicas[
+                        [
+                            "Alumno",
+                            "Nivel",
+                            "Tipo",
+                            "Detalle"
+                        ]
+                    ],
+                    use_container_width=True,
+                    hide_index=True
+                )
                     
 
 
