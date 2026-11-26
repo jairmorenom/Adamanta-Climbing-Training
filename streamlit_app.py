@@ -11625,7 +11625,7 @@ elif pagina == "Vista grupo":
             st.success(
                 f"✅ {texto}"
             )
-                # =========================================================
+    # =========================================================
     # PASO 6A — DASHBOARD FÍSICO DEL GRUPO
     # =========================================================
 
@@ -11729,7 +11729,7 @@ elif pagina == "Vista grupo":
 
 
             # =================================================
-            # BLOQUE
+            # ASIGNAR BLOQUE
             # =================================================
 
             df_fisico_grupo[
@@ -11746,6 +11746,10 @@ elif pagina == "Vista grupo":
                 )
             )
 
+
+            # =================================================
+            # SELECTOR DE BLOQUE
+            # =================================================
 
             bloque_grupo_fisico = st.selectbox(
                 "Bloque físico",
@@ -11782,7 +11786,7 @@ elif pagina == "Vista grupo":
             else:
 
                 # =============================================
-                # NOMBRE DEL BLOQUE
+                # NOMBRE Y SEMANAS DEL BLOQUE
                 # =============================================
 
                 semanas_bloque = {
@@ -11815,7 +11819,7 @@ elif pagina == "Vista grupo":
 
 
                 # =============================================
-                # CARGA TOTAL POR REGISTRO
+                # ZONAS FÍSICAS
                 # =============================================
 
                 zonas_grupo_fisico = [
@@ -11828,6 +11832,10 @@ elif pagina == "Vista grupo":
                     "Piernas / cadera"
                 ]
 
+
+                # =============================================
+                # CARGA TOTAL POR REGISTRO
+                # =============================================
 
                 df_fisico_bloque[
                     "Carga física total"
@@ -11843,7 +11851,7 @@ elif pagina == "Vista grupo":
 
 
                 # =============================================
-                # SESIONES ÚNICAS
+                # SESIONES ÚNICAS DEL GRUPO
                 # =============================================
 
                 sesiones_unicas_grupo = (
@@ -11888,8 +11896,8 @@ elif pagina == "Vista grupo":
 
 
                 # =============================================
-                # ALTA INTERFERENCIA
-                # Evitamos contar cada ejercicio como sesión.
+                # ALTA INTERFERENCIA DEL GRUPO
+                # Se cuenta por sesión, no por ejercicio
                 # =============================================
 
                 sesiones_alta_interferencia = (
@@ -11899,8 +11907,7 @@ elif pagina == "Vista grupo":
                         ]
                         ==
                         "ALTA INTERFERENCIA"
-                    ]
-                    [
+                    ][
                         [
                             "Alumno",
                             "Semana",
@@ -12146,6 +12153,7 @@ elif pagina == "Vista grupo":
                             .idxmax()
                         )
 
+
                         carga_zona_dominante = (
                             carga_zonas_alumno
                             .max()
@@ -12211,19 +12219,29 @@ elif pagina == "Vista grupo":
                     )
 
 
+                    # -----------------------------------------
+                    # GUARDAR RESUMEN
+                    # -----------------------------------------
+
                     resumen_alumnos_fisico.append(
                         {
                             "Alumno":
                                 alumno,
 
                             "Semanas":
-                                int(semanas_alumno),
+                                int(
+                                    semanas_alumno
+                                ),
 
                             "Sesiones":
-                                int(sesiones_alumno),
+                                int(
+                                    sesiones_alumno
+                                ),
 
                             "Ejercicios":
-                                int(ejercicios_alumno),
+                                int(
+                                    ejercicios_alumno
+                                ),
 
                             "Carga física":
                                 round(
@@ -12288,174 +12306,191 @@ elif pagina == "Vista grupo":
                 )
 
 
-                df_resumen_fisico_grupo = (
-                    df_resumen_fisico_grupo
-                    .sort_values(
-                        "Carga física",
-                        ascending=False
-                    )
-                    .reset_index(
-                        drop=True
-                    )
-                )
+                if not df_resumen_fisico_grupo.empty:
 
-
-                # =============================================
-                # GRÁFICA CARGA POR ATLETA
-                # =============================================
-
-                st.subheader(
-                    "Carga física por atleta"
-                )
-
-
-                grafica_carga_grupo = (
-                    alt.Chart(
+                    df_resumen_fisico_grupo = (
                         df_resumen_fisico_grupo
+                        .sort_values(
+                            "Carga física",
+                            ascending=False
+                        )
+                        .reset_index(
+                            drop=True
+                        )
                     )
-                    .mark_bar()
-                    .encode(
 
-                        x=alt.X(
-                            "Carga física:Q",
-                            title="Carga física"
-                        ),
 
-                        y=alt.Y(
-                            "Alumno:N",
-                            title="",
-                            sort="-x"
-                        ),
+                    # =========================================
+                    # GRÁFICA CARGA POR ATLETA
+                    # =========================================
 
-                        tooltip=[
-                            alt.Tooltip(
+                    st.subheader(
+                        "Carga física por atleta"
+                    )
+
+
+                    grafica_carga_grupo = (
+                        alt.Chart(
+                            df_resumen_fisico_grupo
+                        )
+                        .mark_bar()
+                        .encode(
+
+                            x=alt.X(
+                                "Carga física:Q",
+                                title="Carga física"
+                            ),
+
+                            y=alt.Y(
                                 "Alumno:N",
-                                title="Alumno"
+                                title="",
+                                sort="-x"
                             ),
 
-                            alt.Tooltip(
-                                "Carga física:Q",
-                                title="Carga",
-                                format=".1f"
-                            ),
+                            tooltip=[
+                                alt.Tooltip(
+                                    "Alumno:N",
+                                    title="Alumno"
+                                ),
 
-                            alt.Tooltip(
-                                "Sesiones:Q",
-                                title="Sesiones"
-                            ),
+                                alt.Tooltip(
+                                    "Carga física:Q",
+                                    title="Carga",
+                                    format=".1f"
+                                ),
 
-                            alt.Tooltip(
-                                "RPE medio:Q",
-                                title="RPE",
-                                format=".1f"
-                            ),
+                                alt.Tooltip(
+                                    "Sesiones:Q",
+                                    title="Sesiones"
+                                ),
 
-                            alt.Tooltip(
-                                "Zona dominante:N",
-                                title="Zona dominante"
+                                alt.Tooltip(
+                                    "RPE medio:Q",
+                                    title="RPE",
+                                    format=".1f"
+                                ),
+
+                                alt.Tooltip(
+                                    "Zona dominante:N",
+                                    title="Zona dominante"
+                                )
+                            ]
+                        )
+                        .properties(
+                            height=max(
+                                300,
+                                len(
+                                    df_resumen_fisico_grupo
+                                )
+                                *
+                                35
                             )
-                        ]
-                    )
-                    .properties(
-                        height=max(
-                            300,
-                            len(
-                                df_resumen_fisico_grupo
-                            )
-                            *
-                            35
                         )
                     )
-                )
 
 
-                st.altair_chart(
-                    grafica_carga_grupo,
-                    use_container_width=True
-                )
-
-
-                # =============================================
-                # RPE POR ATLETA
-                # =============================================
-
-                st.subheader(
-                    "RPE físico medio"
-                )
-
-
-                grafica_rpe_grupo = (
-                    alt.Chart(
-                        df_resumen_fisico_grupo
+                    st.altair_chart(
+                        grafica_carga_grupo,
+                        use_container_width=True
                     )
-                    .mark_bar()
-                    .encode(
 
-                        x=alt.X(
-                            "RPE medio:Q",
-                            title="RPE medio",
-                            scale=alt.Scale(
-                                domain=[
-                                    0,
-                                    10
-                                ]
-                            )
-                        ),
 
-                        y=alt.Y(
-                            "Alumno:N",
-                            title="",
-                            sort="-x"
-                        ),
+                    # =========================================
+                    # RPE POR ATLETA
+                    # =========================================
 
-                        tooltip=[
-                            "Alumno:N",
+                    st.subheader(
+                        "RPE físico medio"
+                    )
 
-                            alt.Tooltip(
+
+                    grafica_rpe_grupo = (
+                        alt.Chart(
+                            df_resumen_fisico_grupo
+                        )
+                        .mark_bar()
+                        .encode(
+
+                            x=alt.X(
                                 "RPE medio:Q",
-                                format=".1f"
+                                title="RPE medio",
+                                scale=alt.Scale(
+                                    domain=[
+                                        0,
+                                        10
+                                    ]
+                                )
                             ),
 
-                            alt.Tooltip(
-                                "Carga física:Q",
-                                format=".1f"
+                            y=alt.Y(
+                                "Alumno:N",
+                                title="",
+                                sort="-x"
+                            ),
+
+                            tooltip=[
+                                alt.Tooltip(
+                                    "Alumno:N",
+                                    title="Alumno"
+                                ),
+
+                                alt.Tooltip(
+                                    "RPE medio:Q",
+                                    title="RPE",
+                                    format=".1f"
+                                ),
+
+                                alt.Tooltip(
+                                    "Carga física:Q",
+                                    title="Carga física",
+                                    format=".1f"
+                                )
+                            ]
+                        )
+                        .properties(
+                            height=max(
+                                300,
+                                len(
+                                    df_resumen_fisico_grupo
+                                )
+                                *
+                                35
                             )
-                        ]
-                    )
-                    .properties(
-                        height=max(
-                            300,
-                            len(
-                                df_resumen_fisico_grupo
-                            )
-                            *
-                            35
                         )
                     )
-                )
 
 
-                st.altair_chart(
-                    grafica_rpe_grupo,
-                    use_container_width=True
-                )
+                    st.altair_chart(
+                        grafica_rpe_grupo,
+                        use_container_width=True
+                    )
 
 
-                # =============================================
-                # TABLA COMPLETA
-                # =============================================
+                    # =========================================
+                    # TABLA COMPLETA
+                    # =========================================
 
-                st.subheader(
-                    "Resumen por atleta"
-                )
+                    st.subheader(
+                        "Resumen por atleta"
+                    )
 
 
-                st.dataframe(
-                    df_resumen_fisico_grupo,
-                    use_container_width=True,
-                    hide_index=True
-                )
-                    except Exception as error:
+                    st.dataframe(
+                        df_resumen_fisico_grupo,
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+
+                else:
+
+                    st.info(
+                        "No hay atletas con datos suficientes "
+                        "para generar el resumen."
+                    )
+
+
+    except Exception as error:
 
         st.error(
             "No se pudo cargar el dashboard físico del grupo."
@@ -12464,7 +12499,6 @@ elif pagina == "Vista grupo":
         st.code(
             str(error)
         )
-
 
 # =========================================================
 # ALERTAS
