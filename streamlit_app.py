@@ -12455,6 +12455,15 @@ elif pagina == "Vista grupo":
                     use_container_width=True,
                     hide_index=True
                 )
+                    except Exception as error:
+
+        st.error(
+            "No se pudo cargar el dashboard físico del grupo."
+        )
+
+        st.code(
+            str(error)
+        )
 
 
 # =========================================================
