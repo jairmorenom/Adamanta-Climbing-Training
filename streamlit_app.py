@@ -6311,7 +6311,7 @@ elif pagina == "Acondicionamiento físico":
                             use_container_width=True,
                             hide_index=True
                         )
-                                                # =================================================
+                        # =================================================
                         # PASO 5D — PROGRESIÓN POR EJERCICIO
                         # =================================================
 
@@ -7051,6 +7051,954 @@ elif pagina == "Acondicionamiento físico":
                                 use_container_width=True,
                                 hide_index=True
                             )
+                                                    # =================================================
+                        # PASO 5E — ESCALADA + FÍSICO
+                        # =================================================
+
+                        st.divider()
+
+                        st.subheader(
+                            "Escalada + acondicionamiento físico"
+                        )
+
+                        st.caption(
+                            "Analiza en conjunto la carga de escalada, "
+                            "la carga física y la compatibilidad de las sesiones."
+                        )
+
+
+                        # =================================================
+                        # LEER HISTORIAL DE ESCALADA
+                        # =================================================
+
+                        df_escalada_5e = leer_hoja(
+                            "Historial semanal"
+                        )
+
+
+                        columnas_escalada_5e = [
+                            "Semana",
+                            "Sesión",
+                            "Volumen planificado",
+                            "Volumen real",
+                            "RPE planificado",
+                            "RPE real",
+                            "Carga planificada",
+                            "Carga real"
+                        ]
+
+
+                        for columna in columnas_escalada_5e:
+
+                            if columna in df_escalada_5e.columns:
+
+                                df_escalada_5e[
+                                    columna
+                                ] = pd.to_numeric(
+                                    df_escalada_5e[
+                                        columna
+                                    ],
+                                    errors="coerce"
+                                )
+
+
+                        # =================================================
+                        # FILTRAR MISMO ALUMNO Y BLOQUE
+                        # =================================================
+
+                        df_escalada_alumno_5e = (
+                            df_escalada_5e[
+                                (
+                                    df_escalada_5e[
+                                        "Alumno"
+                                    ]
+                                    .astype(str)
+                                    .str.strip()
+                                    ==
+                                    alumno_dashboard_fisico
+                                )
+                                &
+                                (
+                                    df_escalada_5e[
+                                        "Semana"
+                                    ]
+                                    >=
+                                    inicio_dashboard
+                                )
+                                &
+                                (
+                                    df_escalada_5e[
+                                        "Semana"
+                                    ]
+                                    <=
+                                    fin_dashboard
+                                )
+                            ]
+                            .copy()
+                        )
+
+
+                        if df_escalada_alumno_5e.empty:
+
+                            st.info(
+                                "No existen registros de escalada "
+                                "para este atleta en el bloque seleccionado."
+                            )
+
+
+                        else:
+
+                            # =============================================
+                            # RESUMEN SEMANAL ESCALADA
+                            # =============================================
+
+                            semanal_escalada_5e = (
+                                df_escalada_alumno_5e
+                                .groupby(
+                                    "Semana",
+                                    as_index=False
+                                )
+                                .agg({
+                                    "Carga planificada":
+                                        "sum",
+
+                                    "Carga real":
+                                        "sum",
+
+                                    "Volumen planificado":
+                                        "sum",
+
+                                    "Volumen real":
+                                        "sum",
+
+                                    "RPE planificado":
+                                        "mean",
+
+                                    "RPE real":
+                                        "mean",
+
+                                    "Sesión":
+                                        "nunique"
+                                })
+                                .rename(
+                                    columns={
+                                        "Sesión":
+                                            "Sesiones escalada"
+                                    }
+                                )
+                                .sort_values(
+                                    "Semana"
+                                )
+                            )
+
+
+                            # =============================================
+                            # RESUMEN SEMANAL FÍSICO
+                            # =============================================
+
+                            semanal_fisico_5e = (
+                                df_dashboard_alumno
+                                .groupby(
+                                    "Semana",
+                                    as_index=False
+                                )
+                                .agg({
+                                    "Carga física total":
+                                        "sum",
+
+                                    "RPE planificado":
+                                        "mean",
+
+                                    "RPE real":
+                                        "mean",
+
+                                    "Sesión":
+                                        "nunique"
+                                })
+                                .rename(
+                                    columns={
+                                        "Carga física total":
+                                            "Carga física",
+
+                                        "RPE planificado":
+                                            "RPE físico plan",
+
+                                        "RPE real":
+                                            "RPE físico real",
+
+                                        "Sesión":
+                                            "Sesiones físico"
+                                    }
+                                )
+                                .sort_values(
+                                    "Semana"
+                                )
+                            )
+
+
+                            # =============================================
+                            # UNIR ESCALADA + FÍSICO
+                            # =============================================
+
+                            combinado_5e = pd.merge(
+                                semanal_escalada_5e,
+                                semanal_fisico_5e,
+                                on="Semana",
+                                how="outer"
+                            )
+
+
+                            combinado_5e = (
+                                combinado_5e
+                                .sort_values(
+                                    "Semana"
+                                )
+                            )
+
+
+                            columnas_rellenar_5e = [
+                                "Carga planificada",
+                                "Carga real",
+                                "Volumen planificado",
+                                "Volumen real",
+                                "Sesiones escalada",
+                                "Carga física",
+                                "Sesiones físico"
+                            ]
+
+
+                            for columna in columnas_rellenar_5e:
+
+                                if columna in combinado_5e.columns:
+
+                                    combinado_5e[
+                                        columna
+                                    ] = (
+                                        combinado_5e[
+                                            columna
+                                        ]
+                                        .fillna(0)
+                                    )
+
+
+                            # =============================================
+                            # CUMPLIMIENTO ESCALADA
+                            # =============================================
+
+                            combinado_5e[
+                                "Carga escalada %"
+                            ] = combinado_5e.apply(
+                                lambda fila:
+                                    (
+                                        fila[
+                                            "Carga real"
+                                        ]
+                                        /
+                                        fila[
+                                            "Carga planificada"
+                                        ]
+                                        *
+                                        100
+                                    )
+                                    if fila[
+                                        "Carga planificada"
+                                    ] > 0
+                                    else 0,
+                                axis=1
+                            )
+
+
+                            # =============================================
+                            # Δ RPE FÍSICO
+                            # =============================================
+
+                            combinado_5e[
+                                "Δ RPE físico"
+                            ] = (
+                                combinado_5e[
+                                    "RPE físico real"
+                                ]
+                                -
+                                combinado_5e[
+                                    "RPE físico plan"
+                                ]
+                            )
+
+
+                            # =============================================
+                            # ÍNDICES RELATIVOS 0–100
+                            #
+                            # No sumamos escalada y físico porque sus
+                            # unidades de carga son diferentes.
+                            # =============================================
+
+                            max_carga_escalada = (
+                                combinado_5e[
+                                    "Carga real"
+                                ]
+                                .max()
+                            )
+
+
+                            max_carga_fisica = (
+                                combinado_5e[
+                                    "Carga física"
+                                ]
+                                .max()
+                            )
+
+
+                            if max_carga_escalada > 0:
+
+                                combinado_5e[
+                                    "Índice escalada"
+                                ] = (
+                                    combinado_5e[
+                                        "Carga real"
+                                    ]
+                                    /
+                                    max_carga_escalada
+                                    *
+                                    100
+                                )
+
+                            else:
+
+                                combinado_5e[
+                                    "Índice escalada"
+                                ] = 0
+
+
+                            if max_carga_fisica > 0:
+
+                                combinado_5e[
+                                    "Índice físico"
+                                ] = (
+                                    combinado_5e[
+                                        "Carga física"
+                                    ]
+                                    /
+                                    max_carga_fisica
+                                    *
+                                    100
+                                )
+
+                            else:
+
+                                combinado_5e[
+                                    "Índice físico"
+                                ] = 0
+
+
+                            # =================================================
+                            # COMPATIBILIDAD POR SESIÓN
+                            # =================================================
+
+                            compatibilidad_sesiones_5e = (
+                                df_dashboard_alumno[
+                                    [
+                                        "Semana",
+                                        "Sesión",
+                                        "Compatibilidad",
+                                        "Puntaje interferencia"
+                                    ]
+                                ]
+                                .copy()
+                            )
+
+
+                            compatibilidad_sesiones_5e = (
+                                compatibilidad_sesiones_5e
+                                .drop_duplicates(
+                                    subset=[
+                                        "Semana",
+                                        "Sesión"
+                                    ]
+                                )
+                            )
+
+
+                            compatibilidad_sesiones_5e[
+                                "Puntaje interferencia"
+                            ] = pd.to_numeric(
+                                compatibilidad_sesiones_5e[
+                                    "Puntaje interferencia"
+                                ],
+                                errors="coerce"
+                            ).fillna(0)
+
+
+                            sesiones_compatibles = int(
+                                (
+                                    compatibilidad_sesiones_5e[
+                                        "Compatibilidad"
+                                    ]
+                                    ==
+                                    "COMPATIBLE"
+                                )
+                                .sum()
+                            )
+
+
+                            sesiones_revisar = int(
+                                (
+                                    compatibilidad_sesiones_5e[
+                                        "Compatibilidad"
+                                    ]
+                                    ==
+                                    "REVISAR"
+                                )
+                                .sum()
+                            )
+
+
+                            sesiones_interferencia = int(
+                                (
+                                    compatibilidad_sesiones_5e[
+                                        "Compatibilidad"
+                                    ]
+                                    ==
+                                    "ALTA INTERFERENCIA"
+                                )
+                                .sum()
+                            )
+
+
+                            puntaje_interferencia_medio = (
+                                compatibilidad_sesiones_5e[
+                                    "Puntaje interferencia"
+                                ]
+                                .mean()
+                            )
+
+
+                            # =================================================
+                            # KPIs COMBINADOS
+                            # =================================================
+
+                            st.markdown(
+                                "### Resumen combinado"
+                            )
+
+
+                            carga_escalada_total_5e = (
+                                combinado_5e[
+                                    "Carga real"
+                                ]
+                                .sum()
+                            )
+
+
+                            carga_fisica_total_5e = (
+                                combinado_5e[
+                                    "Carga física"
+                                ]
+                                .sum()
+                            )
+
+
+                            col_5e1, col_5e2, col_5e3, col_5e4 = (
+                                st.columns(4)
+                            )
+
+
+                            col_5e1.metric(
+                                "Carga escalada",
+                                f"{carga_escalada_total_5e:.0f}"
+                            )
+
+
+                            col_5e2.metric(
+                                "Carga física",
+                                f"{carga_fisica_total_5e:.1f}"
+                            )
+
+
+                            col_5e3.metric(
+                                "Sesiones alta interferencia",
+                                sesiones_interferencia
+                            )
+
+
+                            col_5e4.metric(
+                                "Interferencia media",
+                                f"{puntaje_interferencia_medio:.1f}"
+                            )
+
+
+                            st.caption(
+                                "Carga de escalada y carga física se muestran "
+                                "por separado porque utilizan escalas distintas."
+                            )
+
+
+                            # =================================================
+                            # COMPATIBILIDAD
+                            # =================================================
+
+                            st.markdown(
+                                "### Compatibilidad de las sesiones"
+                            )
+
+
+                            col_cp1, col_cp2, col_cp3 = (
+                                st.columns(3)
+                            )
+
+
+                            col_cp1.metric(
+                                "✅ Compatible",
+                                sesiones_compatibles
+                            )
+
+
+                            col_cp2.metric(
+                                "🟠 Revisar",
+                                sesiones_revisar
+                            )
+
+
+                            col_cp3.metric(
+                                "🔴 Alta interferencia",
+                                sesiones_interferencia
+                            )
+
+
+                            # =================================================
+                            # GRÁFICA — PATRÓN DE CARGA RELATIVO
+                            # =================================================
+
+                            st.markdown(
+                                "### Patrón semanal de carga"
+                            )
+
+
+                            indices_5e = (
+                                combinado_5e[
+                                    [
+                                        "Semana",
+                                        "Índice escalada",
+                                        "Índice físico"
+                                    ]
+                                ]
+                                .melt(
+                                    id_vars="Semana",
+                                    var_name="Tipo",
+                                    value_name="Índice"
+                                )
+                            )
+
+
+                            grafica_indices_5e = (
+                                alt.Chart(
+                                    indices_5e
+                                )
+                                .mark_line(
+                                    point=True
+                                )
+                                .encode(
+
+                                    x=alt.X(
+                                        "Semana:Q",
+                                        title="Semana"
+                                    ),
+
+                                    y=alt.Y(
+                                        "Índice:Q",
+                                        title=(
+                                            "Índice relativo de carga"
+                                        ),
+                                        scale=alt.Scale(
+                                            domain=[
+                                                0,
+                                                100
+                                            ]
+                                        )
+                                    ),
+
+                                    color=alt.Color(
+                                        "Tipo:N",
+                                        title=""
+                                    ),
+
+                                    tooltip=[
+                                        alt.Tooltip(
+                                            "Semana:Q",
+                                            title="Semana"
+                                        ),
+
+                                        alt.Tooltip(
+                                            "Tipo:N",
+                                            title=""
+                                        ),
+
+                                        alt.Tooltip(
+                                            "Índice:Q",
+                                            title="Índice",
+                                            format=".1f"
+                                        )
+                                    ]
+                                )
+                                .properties(
+                                    height=380
+                                )
+                                .interactive()
+                            )
+
+
+                            st.altair_chart(
+                                grafica_indices_5e,
+                                use_container_width=True
+                            )
+
+
+                            st.caption(
+                                "100 representa la semana de mayor carga "
+                                "registrada dentro del bloque para cada modalidad. "
+                                "Sirve para comparar el patrón, no para sumar "
+                                "las dos cargas."
+                            )
+
+
+                            # =================================================
+                            # TABLA SEMANAL COMBINADA
+                            # =================================================
+
+                            st.markdown(
+                                "### Resumen semanal combinado"
+                            )
+
+
+                            tabla_5e = (
+                                combinado_5e[
+                                    [
+                                        "Semana",
+                                        "Carga real",
+                                        "Carga escalada %",
+                                        "RPE real",
+                                        "Carga física",
+                                        "RPE físico real",
+                                        "Δ RPE físico",
+                                        "Índice escalada",
+                                        "Índice físico"
+                                    ]
+                                ]
+                                .copy()
+                            )
+
+
+                            tabla_5e = tabla_5e.rename(
+                                columns={
+                                    "Carga real":
+                                        "Carga escalada real",
+
+                                    "RPE real":
+                                        "RPE escalada"
+                                }
+                            )
+
+
+                            columnas_redondear_5e = [
+                                "Carga escalada real",
+                                "Carga escalada %",
+                                "RPE escalada",
+                                "Carga física",
+                                "RPE físico real",
+                                "Δ RPE físico",
+                                "Índice escalada",
+                                "Índice físico"
+                            ]
+
+
+                            for columna in columnas_redondear_5e:
+
+                                tabla_5e[
+                                    columna
+                                ] = (
+                                    pd.to_numeric(
+                                        tabla_5e[
+                                            columna
+                                        ],
+                                        errors="coerce"
+                                    )
+                                    .round(1)
+                                )
+
+
+                            st.dataframe(
+                                tabla_5e,
+                                use_container_width=True,
+                                hide_index=True
+                            )
+
+
+                            # =================================================
+                            # COACH INSIGHTS COMBINADOS
+                            # =================================================
+
+                            st.markdown(
+                                "### Coach Insights combinados"
+                            )
+
+
+                            # ---------------------------------------------
+                            # DATOS GENERALES
+                            # ---------------------------------------------
+
+                            carga_escalada_plan_total = (
+                                combinado_5e[
+                                    "Carga planificada"
+                                ]
+                                .sum()
+                            )
+
+
+                            if carga_escalada_plan_total > 0:
+
+                                carga_escalada_pct_total = (
+                                    carga_escalada_total_5e
+                                    /
+                                    carga_escalada_plan_total
+                                    *
+                                    100
+                                )
+
+                            else:
+
+                                carga_escalada_pct_total = 0
+
+
+                            rpe_fisico_plan_medio_5e = (
+                                df_dashboard_alumno[
+                                    "RPE planificado"
+                                ]
+                                .mean()
+                            )
+
+
+                            rpe_fisico_real_medio_5e = (
+                                df_dashboard_alumno[
+                                    "RPE real"
+                                ]
+                                .mean()
+                            )
+
+
+                            dif_rpe_fisico_5e = (
+                                rpe_fisico_real_medio_5e
+                                -
+                                rpe_fisico_plan_medio_5e
+                            )
+
+
+                            # ---------------------------------------------
+                            # 1. ALTA INTERFERENCIA
+                            # ---------------------------------------------
+
+                            if sesiones_interferencia > 0:
+
+                                st.error(
+                                    f"🔴 Se registraron "
+                                    f"{sesiones_interferencia} sesión(es) "
+                                    "con alta interferencia entre escalada "
+                                    "y acondicionamiento físico."
+                                )
+
+                                st.write(
+                                    "Conviene revisar qué zonas se repiten "
+                                    "entre ambos estímulos y si el trabajo "
+                                    "físico puede moverse después de escalar "
+                                    "o reducirse en esas sesiones."
+                                )
+
+
+                            # ---------------------------------------------
+                            # 2. ESCALADA ALTA + RPE FÍSICO ALTO
+                            # ---------------------------------------------
+
+                            if (
+                                carga_escalada_pct_total > 110
+                                and
+                                dif_rpe_fisico_5e >= 1
+                            ):
+
+                                st.warning(
+                                    "🟠 La carga de escalada está por encima "
+                                    "del plan y el RPE físico también supera "
+                                    "lo previsto."
+                                )
+
+                                st.write(
+                                    "Antes de aumentar el estímulo, conviene "
+                                    "mantener o reducir temporalmente alguna "
+                                    "de las dos cargas."
+                                )
+
+
+                            # ---------------------------------------------
+                            # 3. BUENA RESPUESTA GENERAL
+                            # ---------------------------------------------
+
+                            elif (
+                                90
+                                <=
+                                carga_escalada_pct_total
+                                <=
+                                110
+                                and
+                                abs(
+                                    dif_rpe_fisico_5e
+                                )
+                                <
+                                1
+                                and
+                                sesiones_interferencia == 0
+                            ):
+
+                                st.success(
+                                    "✅ La respuesta combinada está cerca "
+                                    "de lo planificado."
+                                )
+
+                                st.write(
+                                    "La carga de escalada se mantiene en rango, "
+                                    "el RPE físico está cerca del objetivo "
+                                    "y no hay sesiones de alta interferencia."
+                                )
+
+
+                            # ---------------------------------------------
+                            # 4. SESIONES A REVISAR
+                            # ---------------------------------------------
+
+                            if (
+                                sesiones_revisar > 0
+                                and
+                                sesiones_interferencia == 0
+                            ):
+
+                                st.info(
+                                    f"🟠 Hay {sesiones_revisar} sesión(es) "
+                                    "clasificadas como REVISAR."
+                                )
+
+                                st.write(
+                                    "No necesariamente implica exceso de carga, "
+                                    "pero sí una coincidencia relevante entre "
+                                    "las zonas trabajadas en físico y escalada."
+                                )
+
+
+                            # ---------------------------------------------
+                            # 5. CAMBIO SIMULTÁNEO DE CARGAS
+                            # ---------------------------------------------
+
+                            combinado_tendencia_5e = (
+                                combinado_5e[
+                                    (
+                                        combinado_5e[
+                                            "Carga real"
+                                        ]
+                                        >
+                                        0
+                                    )
+                                    &
+                                    (
+                                        combinado_5e[
+                                            "Carga física"
+                                        ]
+                                        >
+                                        0
+                                    )
+                                ]
+                                .sort_values(
+                                    "Semana"
+                                )
+                            )
+
+
+                            if len(
+                                combinado_tendencia_5e
+                            ) >= 2:
+
+                                primera_5e = (
+                                    combinado_tendencia_5e
+                                    .iloc[0]
+                                )
+
+                                ultima_5e = (
+                                    combinado_tendencia_5e
+                                    .iloc[-1]
+                                )
+
+
+                                if (
+                                    primera_5e[
+                                        "Carga real"
+                                    ] > 0
+                                    and
+                                    primera_5e[
+                                        "Carga física"
+                                    ] > 0
+                                ):
+
+                                    cambio_escalada_5e = (
+                                        (
+                                            ultima_5e[
+                                                "Carga real"
+                                            ]
+                                            -
+                                            primera_5e[
+                                                "Carga real"
+                                            ]
+                                        )
+                                        /
+                                        primera_5e[
+                                            "Carga real"
+                                        ]
+                                        *
+                                        100
+                                    )
+
+
+                                    cambio_fisico_5e = (
+                                        (
+                                            ultima_5e[
+                                                "Carga física"
+                                            ]
+                                            -
+                                            primera_5e[
+                                                "Carga física"
+                                            ]
+                                        )
+                                        /
+                                        primera_5e[
+                                            "Carga física"
+                                        ]
+                                        *
+                                        100
+                                    )
+
+
+                                    if (
+                                        cambio_escalada_5e > 20
+                                        and
+                                        cambio_fisico_5e > 20
+                                    ):
+
+                                        st.warning(
+                                            "🟠 La carga de escalada y la "
+                                            "carga física han aumentado "
+                                            "simultáneamente más de 20% "
+                                            "entre los registros comparados."
+                                        )
+
+                                        st.write(
+                                            "Comprueba que este incremento "
+                                            "simultáneo forme parte de la "
+                                            "progresión planificada antes "
+                                            "de seguir aumentando."
+                                        )
 
 
     except Exception as error:
