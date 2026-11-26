@@ -5627,6 +5627,690 @@ elif pagina == "Acondicionamiento físico":
                                 grafica_zona_individual,
                                 use_container_width=True
                             )
+                                                    # =================================================
+                        # PASO 5C — PLANIFICADO VS REAL
+                        # =================================================
+
+                        st.divider()
+
+                        st.subheader(
+                            "Planificado vs real"
+                        )
+
+                        st.caption(
+                            "Compara la ejecución real del acondicionamiento "
+                            "con la prescripción original."
+                        )
+
+
+                        # =================================================
+                        # PREPARAR DATOS
+                        # =================================================
+
+                        df_plan_real = (
+                            df_dashboard_alumno.copy()
+                        )
+
+
+                        columnas_plan_real = [
+                            "Series planificadas",
+                            "Series reales",
+                            "Repeticiones planificadas",
+                            "Repeticiones reales",
+                            "Carga externa planificada",
+                            "Carga externa real",
+                            "RPE planificado",
+                            "RPE real"
+                        ]
+
+
+                        for columna in columnas_plan_real:
+
+                            df_plan_real[
+                                columna
+                            ] = pd.to_numeric(
+                                df_plan_real[
+                                    columna
+                                ],
+                                errors="coerce"
+                            ).fillna(0)
+
+
+                        # =================================================
+                        # CUMPLIMIENTO DE SERIES
+                        # =================================================
+
+                        series_plan_total = (
+                            df_plan_real[
+                                "Series planificadas"
+                            ]
+                            .sum()
+                        )
+
+
+                        series_real_total = (
+                            df_plan_real[
+                                "Series reales"
+                            ]
+                            .sum()
+                        )
+
+
+                        if series_plan_total > 0:
+
+                            series_pct = (
+                                series_real_total
+                                /
+                                series_plan_total
+                                *
+                                100
+                            )
+
+                        else:
+
+                            series_pct = 0
+
+
+                        # =================================================
+                        # CUMPLIMIENTO DE REPETICIONES
+                        # =================================================
+
+                        reps_plan_total = (
+                            df_plan_real[
+                                "Repeticiones planificadas"
+                            ]
+                            .sum()
+                        )
+
+
+                        reps_real_total = (
+                            df_plan_real[
+                                "Repeticiones reales"
+                            ]
+                            .sum()
+                        )
+
+
+                        if reps_plan_total > 0:
+
+                            reps_pct = (
+                                reps_real_total
+                                /
+                                reps_plan_total
+                                *
+                                100
+                            )
+
+                        else:
+
+                            reps_pct = 0
+
+
+                        # =================================================
+                        # RPE
+                        # =================================================
+
+                        rpe_plan_fisico_medio = (
+                            df_plan_real[
+                                "RPE planificado"
+                            ]
+                            .mean()
+                        )
+
+
+                        rpe_real_fisico_medio = (
+                            df_plan_real[
+                                "RPE real"
+                            ]
+                            .mean()
+                        )
+
+
+                        dif_rpe_fisico = (
+                            rpe_real_fisico_medio
+                            -
+                            rpe_plan_fisico_medio
+                        )
+
+
+                        # =================================================
+                        # CARGA EXTERNA
+                        # Solo ejercicios donde existe carga externa
+                        # =================================================
+
+                        df_con_carga_externa = (
+                            df_plan_real[
+                                (
+                                    df_plan_real[
+                                        "Carga externa planificada"
+                                    ]
+                                    >
+                                    0
+                                )
+                                |
+                                (
+                                    df_plan_real[
+                                        "Carga externa real"
+                                    ]
+                                    >
+                                    0
+                                )
+                            ]
+                            .copy()
+                        )
+
+
+                        if not df_con_carga_externa.empty:
+
+                            carga_externa_plan_media = (
+                                df_con_carga_externa[
+                                    "Carga externa planificada"
+                                ]
+                                .mean()
+                            )
+
+
+                            carga_externa_real_media = (
+                                df_con_carga_externa[
+                                    "Carga externa real"
+                                ]
+                                .mean()
+                            )
+
+
+                            dif_carga_externa = (
+                                carga_externa_real_media
+                                -
+                                carga_externa_plan_media
+                            )
+
+                        else:
+
+                            carga_externa_plan_media = 0
+                            carga_externa_real_media = 0
+                            dif_carga_externa = 0
+
+
+                        # =================================================
+                        # KPIs
+                        # =================================================
+
+                        col_pr1, col_pr2, col_pr3, col_pr4 = (
+                            st.columns(4)
+                        )
+
+
+                        col_pr1.metric(
+                            "Series cumplidas",
+                            f"{series_pct:.1f}%",
+                            delta=(
+                                f"{series_real_total - series_plan_total:+.0f} "
+                                "series"
+                            )
+                        )
+
+
+                        col_pr2.metric(
+                            "Repeticiones cumplidas",
+                            f"{reps_pct:.1f}%",
+                            delta=(
+                                f"{reps_real_total - reps_plan_total:+.0f} "
+                                "reps"
+                            )
+                        )
+
+
+                        col_pr3.metric(
+                            "RPE real medio",
+                            f"{rpe_real_fisico_medio:.1f}",
+                            delta=(
+                                f"{dif_rpe_fisico:+.1f} "
+                                "vs plan"
+                            ),
+                            delta_color="inverse"
+                        )
+
+
+                        col_pr4.metric(
+                            "Carga externa media",
+                            f"{carga_externa_real_media:.1f} kg",
+                            delta=(
+                                f"{dif_carga_externa:+.1f} kg "
+                                "vs plan"
+                            )
+                        )
+
+
+                        # =================================================
+                        # TRABAJO EXTERNO
+                        # Series × reps × kg
+                        # =================================================
+
+                        df_plan_real[
+                            "Trabajo externo planificado"
+                        ] = (
+                            df_plan_real[
+                                "Series planificadas"
+                            ]
+                            *
+                            df_plan_real[
+                                "Repeticiones planificadas"
+                            ]
+                            *
+                            df_plan_real[
+                                "Carga externa planificada"
+                            ]
+                        )
+
+
+                        df_plan_real[
+                            "Trabajo externo real"
+                        ] = (
+                            df_plan_real[
+                                "Series reales"
+                            ]
+                            *
+                            df_plan_real[
+                                "Repeticiones reales"
+                            ]
+                            *
+                            df_plan_real[
+                                "Carga externa real"
+                            ]
+                        )
+
+
+                        trabajo_plan_total = (
+                            df_plan_real[
+                                "Trabajo externo planificado"
+                            ]
+                            .sum()
+                        )
+
+
+                        trabajo_real_total = (
+                            df_plan_real[
+                                "Trabajo externo real"
+                            ]
+                            .sum()
+                        )
+
+
+                        if trabajo_plan_total > 0:
+
+                            trabajo_pct = (
+                                trabajo_real_total
+                                /
+                                trabajo_plan_total
+                                *
+                                100
+                            )
+
+                        else:
+
+                            trabajo_pct = 0
+
+
+                        if trabajo_plan_total > 0:
+
+                            st.metric(
+                                "Trabajo externo acumulado",
+                                f"{trabajo_real_total:.0f} kg",
+                                delta=(
+                                    f"{trabajo_pct - 100:+.1f}% "
+                                    "vs plan"
+                                )
+                            )
+
+
+                        # =================================================
+                        # RESUMEN SEMANAL
+                        # =================================================
+
+                        resumen_plan_real_semana = (
+                            df_plan_real
+                            .groupby(
+                                "Semana",
+                                as_index=False
+                            )
+                            .agg({
+                                "Series planificadas":
+                                    "sum",
+
+                                "Series reales":
+                                    "sum",
+
+                                "Repeticiones planificadas":
+                                    "sum",
+
+                                "Repeticiones reales":
+                                    "sum",
+
+                                "RPE planificado":
+                                    "mean",
+
+                                "RPE real":
+                                    "mean",
+
+                                "Trabajo externo planificado":
+                                    "sum",
+
+                                "Trabajo externo real":
+                                    "sum"
+                            })
+                            .sort_values(
+                                "Semana"
+                            )
+                        )
+
+
+                        # =================================================
+                        # DIFERENCIA RPE SEMANAL
+                        # =================================================
+
+                        resumen_plan_real_semana[
+                            "Dif. RPE"
+                        ] = (
+                            resumen_plan_real_semana[
+                                "RPE real"
+                            ]
+                            -
+                            resumen_plan_real_semana[
+                                "RPE planificado"
+                            ]
+                        )
+
+
+                        # =================================================
+                        # GRÁFICA SERIES
+                        # =================================================
+
+                        st.markdown(
+                            "### Series planificadas vs reales"
+                        )
+
+
+                        series_long = (
+                            resumen_plan_real_semana[
+                                [
+                                    "Semana",
+                                    "Series planificadas",
+                                    "Series reales"
+                                ]
+                            ]
+                            .melt(
+                                id_vars="Semana",
+                                var_name="Tipo",
+                                value_name="Series"
+                            )
+                        )
+
+
+                        grafica_series_fisico = (
+                            alt.Chart(
+                                series_long
+                            )
+                            .mark_line(
+                                point=True
+                            )
+                            .encode(
+
+                                x=alt.X(
+                                    "Semana:Q",
+                                    title="Semana"
+                                ),
+
+                                y=alt.Y(
+                                    "Series:Q",
+                                    title="Series"
+                                ),
+
+                                color=alt.Color(
+                                    "Tipo:N",
+                                    title=""
+                                ),
+
+                                tooltip=[
+                                    alt.Tooltip(
+                                        "Semana:Q",
+                                        title="Semana"
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Tipo:N",
+                                        title=""
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Series:Q",
+                                        title="Series",
+                                        format=".0f"
+                                    )
+                                ]
+                            )
+                            .properties(
+                                height=320
+                            )
+                            .interactive()
+                        )
+
+
+                        st.altair_chart(
+                            grafica_series_fisico,
+                            use_container_width=True
+                        )
+
+
+                        # =================================================
+                        # GRÁFICA REPETICIONES
+                        # =================================================
+
+                        st.markdown(
+                            "### Repeticiones planificadas vs reales"
+                        )
+
+
+                        reps_long = (
+                            resumen_plan_real_semana[
+                                [
+                                    "Semana",
+                                    "Repeticiones planificadas",
+                                    "Repeticiones reales"
+                                ]
+                            ]
+                            .melt(
+                                id_vars="Semana",
+                                var_name="Tipo",
+                                value_name="Repeticiones"
+                            )
+                        )
+
+
+                        grafica_reps_fisico = (
+                            alt.Chart(
+                                reps_long
+                            )
+                            .mark_line(
+                                point=True
+                            )
+                            .encode(
+
+                                x=alt.X(
+                                    "Semana:Q",
+                                    title="Semana"
+                                ),
+
+                                y=alt.Y(
+                                    "Repeticiones:Q",
+                                    title="Repeticiones"
+                                ),
+
+                                color=alt.Color(
+                                    "Tipo:N",
+                                    title=""
+                                ),
+
+                                tooltip=[
+                                    alt.Tooltip(
+                                        "Semana:Q",
+                                        title="Semana"
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Tipo:N",
+                                        title=""
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Repeticiones:Q",
+                                        title="Repeticiones",
+                                        format=".0f"
+                                    )
+                                ]
+                            )
+                            .properties(
+                                height=320
+                            )
+                            .interactive()
+                        )
+
+
+                        st.altair_chart(
+                            grafica_reps_fisico,
+                            use_container_width=True
+                        )
+
+
+                        # =================================================
+                        # GRÁFICA RPE
+                        # =================================================
+
+                        st.markdown(
+                            "### RPE planificado vs real"
+                        )
+
+
+                        rpe_fisico_long = (
+                            resumen_plan_real_semana[
+                                [
+                                    "Semana",
+                                    "RPE planificado",
+                                    "RPE real"
+                                ]
+                            ]
+                            .melt(
+                                id_vars="Semana",
+                                var_name="Tipo",
+                                value_name="RPE"
+                            )
+                        )
+
+
+                        grafica_rpe_fisico = (
+                            alt.Chart(
+                                rpe_fisico_long
+                            )
+                            .mark_line(
+                                point=True
+                            )
+                            .encode(
+
+                                x=alt.X(
+                                    "Semana:Q",
+                                    title="Semana"
+                                ),
+
+                                y=alt.Y(
+                                    "RPE:Q",
+                                    title="RPE",
+                                    scale=alt.Scale(
+                                        domain=[
+                                            0,
+                                            10
+                                        ]
+                                    )
+                                ),
+
+                                color=alt.Color(
+                                    "Tipo:N",
+                                    title=""
+                                ),
+
+                                tooltip=[
+                                    alt.Tooltip(
+                                        "Semana:Q",
+                                        title="Semana"
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Tipo:N",
+                                        title=""
+                                    ),
+
+                                    alt.Tooltip(
+                                        "RPE:Q",
+                                        title="RPE",
+                                        format=".1f"
+                                    )
+                                ]
+                            )
+                            .properties(
+                                height=320
+                            )
+                            .interactive()
+                        )
+
+
+                        st.altair_chart(
+                            grafica_rpe_fisico,
+                            use_container_width=True
+                        )
+
+
+                        # =================================================
+                        # TABLA DETALLADA POR EJERCICIO
+                        # =================================================
+
+                        st.markdown(
+                            "### Detalle por ejercicio"
+                        )
+
+
+                        tabla_plan_real = (
+                            df_plan_real[
+                                [
+                                    "Semana",
+                                    "Sesión",
+                                    "Ejercicio",
+                                    "Series planificadas",
+                                    "Series reales",
+                                    "Repeticiones planificadas",
+                                    "Repeticiones reales",
+                                    "Carga externa planificada",
+                                    "Carga externa real",
+                                    "RPE planificado",
+                                    "RPE real"
+                                ]
+                            ]
+                            .copy()
+                            .sort_values(
+                                [
+                                    "Semana",
+                                    "Sesión"
+                                ],
+                                ascending=[
+                                    False,
+                                    False
+                                ]
+                            )
+                        )
+
+
+                        st.dataframe(
+                            tabla_plan_real,
+                            use_container_width=True,
+                            hide_index=True
+                        )
 
 
     except Exception as error:
