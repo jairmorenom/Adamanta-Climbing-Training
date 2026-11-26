@@ -12488,6 +12488,607 @@ elif pagina == "Vista grupo":
                         "No hay atletas con datos suficientes "
                         "para generar el resumen."
                     )
+                                    # =========================================================
+                # PASO 6B — HEATMAP FÍSICO DEL GRUPO
+                # =========================================================
+
+                st.divider()
+
+                st.header(
+                    "Heatmap físico del grupo"
+                )
+
+                st.caption(
+                    "Compara la carga semanal de todos los atletas. "
+                    "Puedes visualizar la carga física total, el RPE "
+                    "o una zona corporal específica."
+                )
+
+
+                # =========================================================
+                # MÉTRICA A VISUALIZAR
+                # =========================================================
+
+                opciones_heatmap_fisico = [
+                    "Carga física",
+                    "RPE físico",
+                    "Dedos",
+                    "Antebrazo / muñeca",
+                    "Tracción (espalda/bíceps)",
+                    "Empuje (pecho/tríceps)",
+                    "Hombro",
+                    "Core",
+                    "Piernas / cadera"
+                ]
+
+
+                metrica_heatmap_fisico = st.selectbox(
+                    "Métrica del heatmap",
+                    opciones_heatmap_fisico,
+                    key="metrica_heatmap_fisico"
+                )
+
+
+                # =========================================================
+                # DEFINIR COLUMNA Y TIPO DE CÁLCULO
+                # =========================================================
+
+                if metrica_heatmap_fisico == "Carga física":
+
+                    columna_heatmap = (
+                        "Carga física total"
+                    )
+
+                    funcion_heatmap = "sum"
+
+                    titulo_valor_heatmap = (
+                        "Carga física"
+                    )
+
+
+                elif metrica_heatmap_fisico == "RPE físico":
+
+                    columna_heatmap = (
+                        "RPE real"
+                    )
+
+                    funcion_heatmap = "mean"
+
+                    titulo_valor_heatmap = (
+                        "RPE medio"
+                    )
+
+
+                else:
+
+                    columna_heatmap = (
+                        metrica_heatmap_fisico
+                    )
+
+                    funcion_heatmap = "sum"
+
+                    titulo_valor_heatmap = (
+                        f"Carga · "
+                        f"{metrica_heatmap_fisico}"
+                    )
+
+
+                # =========================================================
+                # AGRUPAR POR ALUMNO + SEMANA
+                # =========================================================
+
+                df_heatmap_fisico = (
+                    df_fisico_bloque
+                    .groupby(
+                        [
+                            "Alumno",
+                            "Semana"
+                        ],
+                        as_index=False
+                    )
+                    .agg(
+                        Valor=(
+                            columna_heatmap,
+                            funcion_heatmap
+                        )
+                    )
+                )
+
+
+                df_heatmap_fisico[
+                    "Semana"
+                ] = (
+                    pd.to_numeric(
+                        df_heatmap_fisico[
+                            "Semana"
+                        ],
+                        errors="coerce"
+                    )
+                )
+
+
+                df_heatmap_fisico[
+                    "Valor"
+                ] = (
+                    pd.to_numeric(
+                        df_heatmap_fisico[
+                            "Valor"
+                        ],
+                        errors="coerce"
+                    )
+                )
+
+
+                df_heatmap_fisico = (
+                    df_heatmap_fisico
+                    .dropna(
+                        subset=[
+                            "Alumno",
+                            "Semana"
+                        ]
+                    )
+                )
+
+
+                df_heatmap_fisico[
+                    "Semana"
+                ] = (
+                    df_heatmap_fisico[
+                        "Semana"
+                    ]
+                    .astype(int)
+                )
+
+
+                # =========================================================
+                # TODAS LAS SEMANAS DEL BLOQUE
+                # =========================================================
+
+                semanas_heatmap = list(
+                    range(
+                        semana_inicio,
+                        semana_fin + 1
+                    )
+                )
+
+
+                alumnos_heatmap = sorted(
+                    df_fisico_bloque[
+                        "Alumno"
+                    ]
+                    .dropna()
+                    .astype(str)
+                    .str.strip()
+                    .unique()
+                    .tolist()
+                )
+
+
+                # =========================================================
+                # CREAR CUADRÍCULA COMPLETA
+                #
+                # Esto permite mostrar también semanas donde un atleta
+                # todavía no tiene registros.
+                # =========================================================
+
+                cuadrilla_heatmap = (
+                    pd.MultiIndex
+                    .from_product(
+                        [
+                            alumnos_heatmap,
+                            semanas_heatmap
+                        ],
+                        names=[
+                            "Alumno",
+                            "Semana"
+                        ]
+                    )
+                    .to_frame(
+                        index=False
+                    )
+                )
+
+
+                df_heatmap_completo = (
+                    cuadrilla_heatmap
+                    .merge(
+                        df_heatmap_fisico,
+                        on=[
+                            "Alumno",
+                            "Semana"
+                        ],
+                        how="left"
+                    )
+                )
+
+
+                # =========================================================
+                # TEXTO DENTRO DE LAS CELDAS
+                # =========================================================
+
+                df_heatmap_completo[
+                    "Etiqueta"
+                ] = (
+                    df_heatmap_completo[
+                        "Valor"
+                    ]
+                    .apply(
+                        lambda valor:
+                            ""
+                            if pd.isna(valor)
+                            else f"{valor:.1f}"
+                    )
+                )
+
+
+                df_heatmap_completo[
+                    "Estado"
+                ] = (
+                    df_heatmap_completo[
+                        "Valor"
+                    ]
+                    .apply(
+                        lambda valor:
+                            "Sin registro"
+                            if pd.isna(valor)
+                            else "Con registro"
+                    )
+                )
+
+
+                # =========================================================
+                # ORDENAR ATLETAS SEGÚN LA MÉTRICA
+                # =========================================================
+
+                if metrica_heatmap_fisico == "RPE físico":
+
+                    ranking_heatmap = (
+                        df_heatmap_fisico
+                        .groupby(
+                            "Alumno"
+                        )[
+                            "Valor"
+                        ]
+                        .mean()
+                        .sort_values(
+                            ascending=False
+                        )
+                        .index
+                        .tolist()
+                    )
+
+
+                else:
+
+                    ranking_heatmap = (
+                        df_heatmap_fisico
+                        .groupby(
+                            "Alumno"
+                        )[
+                            "Valor"
+                        ]
+                        .sum()
+                        .sort_values(
+                            ascending=False
+                        )
+                        .index
+                        .tolist()
+                    )
+
+
+                # =========================================================
+                # HEATMAP
+                # =========================================================
+
+                st.subheader(
+                    f"{metrica_heatmap_fisico} por semana"
+                )
+
+
+                base_heatmap = (
+                    alt.Chart(
+                        df_heatmap_completo
+                    )
+                    .encode(
+
+                        x=alt.X(
+                            "Semana:O",
+                            title="Semana",
+                            sort=semanas_heatmap
+                        ),
+
+                        y=alt.Y(
+                            "Alumno:N",
+                            title="Atleta",
+                            sort=ranking_heatmap
+                        )
+                    )
+                )
+
+
+                # =========================================================
+                # ESCALA RPE 0–10
+                # =========================================================
+
+                if metrica_heatmap_fisico == "RPE físico":
+
+                    rect_heatmap = (
+                        base_heatmap
+                        .mark_rect()
+                        .encode(
+
+                            color=alt.Color(
+                                "Valor:Q",
+                                title="RPE",
+                                scale=alt.Scale(
+                                    domain=[
+                                        0,
+                                        10
+                                    ]
+                                )
+                            ),
+
+                            tooltip=[
+                                alt.Tooltip(
+                                    "Alumno:N",
+                                    title="Atleta"
+                                ),
+
+                                alt.Tooltip(
+                                    "Semana:O",
+                                    title="Semana"
+                                ),
+
+                                alt.Tooltip(
+                                    "Valor:Q",
+                                    title="RPE medio",
+                                    format=".1f"
+                                ),
+
+                                alt.Tooltip(
+                                    "Estado:N",
+                                    title="Estado"
+                                )
+                            ]
+                        )
+                    )
+
+
+                else:
+
+                    rect_heatmap = (
+                        base_heatmap
+                        .mark_rect()
+                        .encode(
+
+                            color=alt.Color(
+                                "Valor:Q",
+                                title=(
+                                    titulo_valor_heatmap
+                                )
+                            ),
+
+                            tooltip=[
+                                alt.Tooltip(
+                                    "Alumno:N",
+                                    title="Atleta"
+                                ),
+
+                                alt.Tooltip(
+                                    "Semana:O",
+                                    title="Semana"
+                                ),
+
+                                alt.Tooltip(
+                                    "Valor:Q",
+                                    title=(
+                                        titulo_valor_heatmap
+                                    ),
+                                    format=".1f"
+                                ),
+
+                                alt.Tooltip(
+                                    "Estado:N",
+                                    title="Estado"
+                                )
+                            ]
+                        )
+                    )
+
+
+                # =========================================================
+                # NÚMERO DENTRO DE CADA CELDA
+                # =========================================================
+
+                texto_heatmap = (
+                    base_heatmap
+                    .mark_text(
+                        fontSize=11
+                    )
+                    .encode(
+                        text=alt.Text(
+                            "Etiqueta:N"
+                        )
+                    )
+                )
+
+
+                grafica_heatmap_fisico = (
+                    rect_heatmap
+                    +
+                    texto_heatmap
+                ).properties(
+                    height=max(
+                        300,
+                        len(
+                            alumnos_heatmap
+                        )
+                        *
+                        45
+                    )
+                )
+
+
+                st.altair_chart(
+                    grafica_heatmap_fisico,
+                    use_container_width=True
+                )
+
+
+                st.caption(
+                    "Las celdas vacías representan semanas "
+                    "sin registros físicos para ese atleta."
+                )
+
+
+                # =========================================================
+                # RESUMEN DE LA MÉTRICA
+                # =========================================================
+
+                if not df_heatmap_fisico.empty:
+
+                    if metrica_heatmap_fisico == "RPE físico":
+
+                        resumen_heatmap_atletas = (
+                            df_heatmap_fisico
+                            .groupby(
+                                "Alumno",
+                                as_index=False
+                            )
+                            .agg(
+                                {
+                                    "Valor":
+                                        "mean",
+
+                                    "Semana":
+                                        "nunique"
+                                }
+                            )
+                            .rename(
+                                columns={
+                                    "Valor":
+                                        "RPE medio",
+
+                                    "Semana":
+                                        "Semanas registradas"
+                                }
+                            )
+                        )
+
+
+                        resumen_heatmap_atletas[
+                            "RPE medio"
+                        ] = (
+                            resumen_heatmap_atletas[
+                                "RPE medio"
+                            ]
+                            .round(1)
+                        )
+
+
+                        resumen_heatmap_atletas = (
+                            resumen_heatmap_atletas
+                            .sort_values(
+                                "RPE medio",
+                                ascending=False
+                            )
+                        )
+
+
+                    else:
+
+                        resumen_heatmap_atletas = (
+                            df_heatmap_fisico
+                            .groupby(
+                                "Alumno",
+                                as_index=False
+                            )
+                            .agg(
+                                {
+                                    "Valor":
+                                        "sum",
+
+                                    "Semana":
+                                        "nunique"
+                                }
+                            )
+                            .rename(
+                                columns={
+                                    "Valor":
+                                        titulo_valor_heatmap,
+
+                                    "Semana":
+                                        "Semanas registradas"
+                                }
+                            )
+                        )
+
+
+                        resumen_heatmap_atletas[
+                            titulo_valor_heatmap
+                        ] = (
+                            resumen_heatmap_atletas[
+                                titulo_valor_heatmap
+                            ]
+                            .round(1)
+                        )
+
+
+                        resumen_heatmap_atletas = (
+                            resumen_heatmap_atletas
+                            .sort_values(
+                                titulo_valor_heatmap,
+                                ascending=False
+                            )
+                        )
+
+
+                    st.subheader(
+                        "Resumen del periodo"
+                    )
+
+
+                    st.dataframe(
+                        resumen_heatmap_atletas,
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+
+                # =========================================================
+                # MATRIZ NUMÉRICA
+                # =========================================================
+
+                st.subheader(
+                    "Matriz semanal"
+                )
+
+
+                matriz_heatmap = (
+                    df_heatmap_fisico
+                    .pivot(
+                        index="Alumno",
+                        columns="Semana",
+                        values="Valor"
+                    )
+                )
+
+
+                matriz_heatmap = (
+                    matriz_heatmap
+                    .reindex(
+                        index=ranking_heatmap,
+                        columns=semanas_heatmap
+                    )
+                    .round(1)
+                )
+
+
+                st.dataframe(
+                    matriz_heatmap,
+                    use_container_width=True
+                )
+                    
 
 
     except Exception as error:
