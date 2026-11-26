@@ -13956,6 +13956,722 @@ elif pagina == "Vista grupo":
                     use_container_width=True,
                     hide_index=True
                 )
+                                # =========================================================
+                # PASO 6D — PRIORIDADES AUTOMÁTICAS DEL COACH
+                # =========================================================
+
+                st.divider()
+
+                st.header(
+                    "Prioridades del coach"
+                )
+
+                st.caption(
+                    "Orden automático de atletas según la importancia "
+                    "de las alertas detectadas."
+                )
+
+
+                # =========================================================
+                # PUNTOS POR NIVEL DE ALERTA
+                # =========================================================
+
+                puntos_prioridad = {
+                    "ALTA": 100,
+                    "REVISAR": 30,
+                    "MONITOREAR": 10,
+                    "OK": 0
+                }
+
+
+                df_prioridades = (
+                    df_alertas_fisicas.copy()
+                )
+
+
+                df_prioridades[
+                    "Puntos"
+                ] = (
+                    df_prioridades[
+                        "Nivel"
+                    ]
+                    .map(
+                        puntos_prioridad
+                    )
+                    .fillna(0)
+                )
+
+
+                # =========================================================
+                # RESUMEN POR ATLETA
+                # =========================================================
+
+                prioridades_coach = []
+
+
+                for alumno_prioridad in (
+                    df_prioridades[
+                        "Alumno"
+                    ]
+                    .unique()
+                ):
+
+                    df_prioridad_alumno = (
+                        df_prioridades[
+                            df_prioridades[
+                                "Alumno"
+                            ]
+                            ==
+                            alumno_prioridad
+                        ]
+                        .copy()
+                    )
+
+
+                    # =====================================================
+                    # CONTEO POR NIVEL
+                    # =====================================================
+
+                    altas_prioridad = int(
+                        (
+                            df_prioridad_alumno[
+                                "Nivel"
+                            ]
+                            ==
+                            "ALTA"
+                        )
+                        .sum()
+                    )
+
+
+                    revisar_prioridad = int(
+                        (
+                            df_prioridad_alumno[
+                                "Nivel"
+                            ]
+                            ==
+                            "REVISAR"
+                        )
+                        .sum()
+                    )
+
+
+                    monitorear_prioridad = int(
+                        (
+                            df_prioridad_alumno[
+                                "Nivel"
+                            ]
+                            ==
+                            "MONITOREAR"
+                        )
+                        .sum()
+                    )
+
+
+                    # =====================================================
+                    # PUNTAJE TOTAL
+                    # =====================================================
+
+                    puntaje_prioridad = (
+                        df_prioridad_alumno[
+                            "Puntos"
+                        ]
+                        .sum()
+                    )
+
+
+                    # =====================================================
+                    # NIVEL MÁXIMO
+                    # =====================================================
+
+                    if altas_prioridad > 0:
+
+                        prioridad_final = "ALTA"
+
+                        icono_prioridad = "🔴"
+
+                        orden_prioridad = 1
+
+
+                    elif revisar_prioridad > 0:
+
+                        prioridad_final = "REVISAR"
+
+                        icono_prioridad = "🟠"
+
+                        orden_prioridad = 2
+
+
+                    elif monitorear_prioridad > 0:
+
+                        prioridad_final = "MONITOREAR"
+
+                        icono_prioridad = "🟡"
+
+                        orden_prioridad = 3
+
+
+                    else:
+
+                        prioridad_final = "OK"
+
+                        icono_prioridad = "✅"
+
+                        orden_prioridad = 4
+
+
+                    # =====================================================
+                    # RAZONES
+                    # =====================================================
+
+                    razones_prioridad = (
+                        df_prioridad_alumno[
+                            df_prioridad_alumno[
+                                "Nivel"
+                            ]
+                            !=
+                            "OK"
+                        ]
+                        [
+                            "Tipo"
+                        ]
+                        .dropna()
+                        .astype(str)
+                        .unique()
+                        .tolist()
+                    )
+
+
+                    if razones_prioridad:
+
+                        razones_texto = ", ".join(
+                            razones_prioridad
+                        )
+
+                    else:
+
+                        razones_texto = (
+                            "Sin alertas relevantes"
+                        )
+
+
+                    # =====================================================
+                    # BUSCAR DATOS DEL RESUMEN 6A
+                    # =====================================================
+
+                    datos_alumno_6a = (
+                        df_resumen_fisico_grupo[
+                            df_resumen_fisico_grupo[
+                                "Alumno"
+                            ]
+                            ==
+                            alumno_prioridad
+                        ]
+                    )
+
+
+                    if not datos_alumno_6a.empty:
+
+                        datos_alumno_6a = (
+                            datos_alumno_6a.iloc[0]
+                        )
+
+
+                        carga_prioridad = float(
+                            datos_alumno_6a[
+                                "Carga física"
+                            ]
+                        )
+
+
+                        rpe_prioridad = float(
+                            datos_alumno_6a[
+                                "RPE medio"
+                            ]
+                        )
+
+
+                        zona_prioridad = (
+                            datos_alumno_6a[
+                                "Zona dominante"
+                            ]
+                        )
+
+
+                        sesiones_prioridad = int(
+                            datos_alumno_6a[
+                                "Sesiones"
+                            ]
+                        )
+
+
+                    else:
+
+                        carga_prioridad = 0
+
+                        rpe_prioridad = 0
+
+                        zona_prioridad = "-"
+
+                        sesiones_prioridad = 0
+
+
+                    # =====================================================
+                    # AGREGAR AL RESUMEN
+                    # =====================================================
+
+                    prioridades_coach.append(
+                        {
+                            "Alumno":
+                                alumno_prioridad,
+
+                            "Prioridad":
+                                prioridad_final,
+
+                            "Icono":
+                                icono_prioridad,
+
+                            "Orden":
+                                orden_prioridad,
+
+                            "Puntaje":
+                                int(
+                                    puntaje_prioridad
+                                ),
+
+                            "Alertas altas":
+                                altas_prioridad,
+
+                            "Revisar":
+                                revisar_prioridad,
+
+                            "Monitorear":
+                                monitorear_prioridad,
+
+                            "Carga física":
+                                round(
+                                    carga_prioridad,
+                                    1
+                                ),
+
+                            "RPE medio":
+                                round(
+                                    rpe_prioridad,
+                                    1
+                                ),
+
+                            "Zona dominante":
+                                zona_prioridad,
+
+                            "Sesiones":
+                                sesiones_prioridad,
+
+                            "Motivos":
+                                razones_texto
+                        }
+                    )
+
+
+                # =========================================================
+                # DATAFRAME FINAL
+                # =========================================================
+
+                df_prioridades_coach = pd.DataFrame(
+                    prioridades_coach
+                )
+
+
+                df_prioridades_coach = (
+                    df_prioridades_coach
+                    .sort_values(
+                        [
+                            "Orden",
+                            "Puntaje",
+                            "RPE medio",
+                            "Carga física"
+                        ],
+                        ascending=[
+                            True,
+                            False,
+                            False,
+                            False
+                        ]
+                    )
+                    .reset_index(
+                        drop=True
+                    )
+                )
+
+
+                # =========================================================
+                # POSICIÓN EN EL RANKING
+                # =========================================================
+
+                df_prioridades_coach[
+                    "Posición"
+                ] = (
+                    range(
+                        1,
+                        len(
+                            df_prioridades_coach
+                        )
+                        +
+                        1
+                    )
+                )
+
+
+                # =========================================================
+                # KPIs
+                # =========================================================
+
+                atletas_prioridad_alta = int(
+                    (
+                        df_prioridades_coach[
+                            "Prioridad"
+                        ]
+                        ==
+                        "ALTA"
+                    )
+                    .sum()
+                )
+
+
+                atletas_revisar = int(
+                    (
+                        df_prioridades_coach[
+                            "Prioridad"
+                        ]
+                        ==
+                        "REVISAR"
+                    )
+                    .sum()
+                )
+
+
+                atletas_monitorear = int(
+                    (
+                        df_prioridades_coach[
+                            "Prioridad"
+                        ]
+                        ==
+                        "MONITOREAR"
+                    )
+                    .sum()
+                )
+
+
+                atletas_ok = int(
+                    (
+                        df_prioridades_coach[
+                            "Prioridad"
+                        ]
+                        ==
+                        "OK"
+                    )
+                    .sum()
+                )
+
+
+                col_p1, col_p2, col_p3, col_p4 = (
+                    st.columns(4)
+                )
+
+
+                col_p1.metric(
+                    "🔴 Prioridad alta",
+                    atletas_prioridad_alta
+                )
+
+
+                col_p2.metric(
+                    "🟠 Revisar",
+                    atletas_revisar
+                )
+
+
+                col_p3.metric(
+                    "🟡 Monitorear",
+                    atletas_monitorear
+                )
+
+
+                col_p4.metric(
+                    "✅ Correcto",
+                    atletas_ok
+                )
+
+
+                # =========================================================
+                # ATLETA DE MAYOR PRIORIDAD
+                # =========================================================
+
+                if not df_prioridades_coach.empty:
+
+                    atleta_mayor_prioridad = (
+                        df_prioridades_coach
+                        .iloc[0]
+                    )
+
+
+                    if (
+                        atleta_mayor_prioridad[
+                            "Prioridad"
+                        ]
+                        ==
+                        "ALTA"
+                    ):
+
+                        st.error(
+                            f"🔴 Primera prioridad: "
+                            f"{atleta_mayor_prioridad['Alumno']}"
+                        )
+
+
+                    elif (
+                        atleta_mayor_prioridad[
+                            "Prioridad"
+                        ]
+                        ==
+                        "REVISAR"
+                    ):
+
+                        st.warning(
+                            f"🟠 Primera revisión: "
+                            f"{atleta_mayor_prioridad['Alumno']}"
+                        )
+
+
+                    elif (
+                        atleta_mayor_prioridad[
+                            "Prioridad"
+                        ]
+                        ==
+                        "MONITOREAR"
+                    ):
+
+                        st.info(
+                            f"🟡 Principal atleta a monitorear: "
+                            f"{atleta_mayor_prioridad['Alumno']}"
+                        )
+
+
+                    else:
+
+                        st.success(
+                            "✅ No hay atletas con alertas "
+                            "relevantes en este bloque."
+                        )
+
+
+                    if (
+                        atleta_mayor_prioridad[
+                            "Prioridad"
+                        ]
+                        !=
+                        "OK"
+                    ):
+
+                        st.write(
+                            "**Motivos:** "
+                            f"{atleta_mayor_prioridad['Motivos']}"
+                        )
+
+
+                # =========================================================
+                # RANKING VISUAL
+                # =========================================================
+
+                st.subheader(
+                    "Ranking de prioridades"
+                )
+
+
+                for _, atleta_prioridad in (
+                    df_prioridades_coach.iterrows()
+                ):
+
+                    titulo_prioridad = (
+                        f"{int(atleta_prioridad['Posición'])}. "
+                        f"{atleta_prioridad['Icono']} "
+                        f"{atleta_prioridad['Alumno']} · "
+                        f"{atleta_prioridad['Prioridad']}"
+                    )
+
+
+                    with st.expander(
+                        titulo_prioridad
+                    ):
+
+                        col_r1, col_r2, col_r3, col_r4 = (
+                            st.columns(4)
+                        )
+
+
+                        col_r1.metric(
+                            "Puntaje",
+                            int(
+                                atleta_prioridad[
+                                    "Puntaje"
+                                ]
+                            )
+                        )
+
+
+                        col_r2.metric(
+                            "Carga física",
+                            f"{atleta_prioridad['Carga física']:.1f}"
+                        )
+
+
+                        col_r3.metric(
+                            "RPE medio",
+                            f"{atleta_prioridad['RPE medio']:.1f}"
+                        )
+
+
+                        col_r4.metric(
+                            "Sesiones",
+                            int(
+                                atleta_prioridad[
+                                    "Sesiones"
+                                ]
+                            )
+                        )
+
+
+                        st.write(
+                            "**Zona dominante:** "
+                            f"{atleta_prioridad['Zona dominante']}"
+                        )
+
+
+                        st.write(
+                            "**Motivos principales:** "
+                            f"{atleta_prioridad['Motivos']}"
+                        )
+
+
+                        # =============================================
+                        # DETALLES DE ALERTAS
+                        # =============================================
+
+                        alertas_detalle_coach = (
+                            df_prioridades[
+                                (
+                                    df_prioridades[
+                                        "Alumno"
+                                    ]
+                                    ==
+                                    atleta_prioridad[
+                                        "Alumno"
+                                    ]
+                                )
+                                &
+                                (
+                                    df_prioridades[
+                                        "Nivel"
+                                    ]
+                                    !=
+                                    "OK"
+                                )
+                            ]
+                        )
+
+
+                        if not alertas_detalle_coach.empty:
+
+                            st.markdown(
+                                "**Alertas detectadas:**"
+                            )
+
+
+                            for _, alerta_coach in (
+                                alertas_detalle_coach.iterrows()
+                            ):
+
+                                if (
+                                    alerta_coach[
+                                        "Nivel"
+                                    ]
+                                    ==
+                                    "ALTA"
+                                ):
+
+                                    st.error(
+                                        f"{alerta_coach['Tipo']} — "
+                                        f"{alerta_coach['Detalle']}"
+                                    )
+
+
+                                elif (
+                                    alerta_coach[
+                                        "Nivel"
+                                    ]
+                                    ==
+                                    "REVISAR"
+                                ):
+
+                                    st.warning(
+                                        f"{alerta_coach['Tipo']} — "
+                                        f"{alerta_coach['Detalle']}"
+                                    )
+
+
+                                elif (
+                                    alerta_coach[
+                                        "Nivel"
+                                    ]
+                                    ==
+                                    "MONITOREAR"
+                                ):
+
+                                    st.info(
+                                        f"{alerta_coach['Tipo']} — "
+                                        f"{alerta_coach['Detalle']}"
+                                    )
+
+
+                        else:
+
+                            st.success(
+                                "Sin alertas relevantes."
+                            )
+
+
+                # =========================================================
+                # TABLA FINAL
+                # =========================================================
+
+                st.subheader(
+                    "Tabla de prioridades"
+                )
+
+
+                tabla_prioridades_coach = (
+                    df_prioridades_coach[
+                        [
+                            "Posición",
+                            "Alumno",
+                            "Prioridad",
+                            "Puntaje",
+                            "Alertas altas",
+                            "Revisar",
+                            "Monitorear",
+                            "Carga física",
+                            "RPE medio",
+                            "Zona dominante",
+                            "Motivos"
+                        ]
+                    ]
+                )
+
+
+                st.dataframe(
+                    tabla_prioridades_coach,
+                    use_container_width=True,
+                    hide_index=True
+                )
                     
 
 
