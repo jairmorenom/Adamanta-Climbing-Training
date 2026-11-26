@@ -5150,6 +5150,483 @@ elif pagina == "Acondicionamiento físico":
                             use_container_width=True,
                             hide_index=True
                         )
+                        # =================================================
+                        # PASO 5B — CARGA FÍSICA POR ZONA
+                        # =================================================
+
+                        st.divider()
+
+                        st.subheader(
+                            "Carga física por zona"
+                        )
+
+                        st.caption(
+                            "Distribución de la carga acumulada y evolución "
+                            "semanal por zona corporal."
+                        )
+
+
+                        # =================================================
+                        # CARGA ACUMULADA POR ZONA
+                        # =================================================
+
+                        carga_acumulada_zonas = (
+                            df_dashboard_alumno[
+                                zonas_dashboard
+                            ]
+                            .fillna(0)
+                            .sum()
+                        )
+
+
+                        df_carga_zonas = (
+                            carga_acumulada_zonas
+                            .reset_index()
+                        )
+
+
+                        df_carga_zonas.columns = [
+                            "Zona",
+                            "Carga"
+                        ]
+
+
+                        df_carga_zonas[
+                            "Carga"
+                        ] = (
+                            pd.to_numeric(
+                                df_carga_zonas[
+                                    "Carga"
+                                ],
+                                errors="coerce"
+                            )
+                            .fillna(0)
+                        )
+
+
+                        carga_total_zonas = (
+                            df_carga_zonas[
+                                "Carga"
+                            ]
+                            .sum()
+                        )
+
+
+                        if carga_total_zonas > 0:
+
+                            df_carga_zonas[
+                                "Porcentaje"
+                            ] = (
+                                df_carga_zonas[
+                                    "Carga"
+                                ]
+                                /
+                                carga_total_zonas
+                                *
+                                100
+                            )
+
+                        else:
+
+                            df_carga_zonas[
+                                "Porcentaje"
+                            ] = 0
+
+
+                        df_carga_zonas[
+                            "Carga"
+                        ] = (
+                            df_carga_zonas[
+                                "Carga"
+                            ]
+                            .round(1)
+                        )
+
+
+                        df_carga_zonas[
+                            "Porcentaje"
+                        ] = (
+                            df_carga_zonas[
+                                "Porcentaje"
+                            ]
+                            .round(1)
+                        )
+
+
+                        df_carga_zonas = (
+                            df_carga_zonas
+                            .sort_values(
+                                "Carga",
+                                ascending=False
+                            )
+                            .reset_index(
+                                drop=True
+                            )
+                        )
+
+
+                        # =================================================
+                        # MÉTRICAS PRINCIPALES
+                        # =================================================
+
+                        zona_mas_cargada = (
+                            df_carga_zonas.iloc[0]
+                        )
+
+
+                        zonas_activas = int(
+                            (
+                                df_carga_zonas[
+                                    "Carga"
+                                ]
+                                >
+                                0
+                            )
+                            .sum()
+                        )
+
+
+                        col_z1, col_z2, col_z3 = (
+                            st.columns(3)
+                        )
+
+
+                        col_z1.metric(
+                            "Zona más cargada",
+                            zona_mas_cargada[
+                                "Zona"
+                            ]
+                        )
+
+
+                        col_z2.metric(
+                            "Carga de esa zona",
+                            f"{zona_mas_cargada['Carga']:.1f}"
+                        )
+
+
+                        col_z3.metric(
+                            "Participación",
+                            f"{zona_mas_cargada['Porcentaje']:.1f}%"
+                        )
+
+
+                        st.caption(
+                            f"Zonas con carga registrada: "
+                            f"{zonas_activas} de "
+                            f"{len(zonas_dashboard)}."
+                        )
+
+
+                        # =================================================
+                        # GRÁFICA — CARGA ACUMULADA
+                        # =================================================
+
+                        st.markdown(
+                            "### Distribución acumulada"
+                        )
+
+
+                        grafica_zonas_acumulada = (
+                            alt.Chart(
+                                df_carga_zonas
+                            )
+                            .mark_bar()
+                            .encode(
+
+                                x=alt.X(
+                                    "Carga:Q",
+                                    title="Carga acumulada"
+                                ),
+
+                                y=alt.Y(
+                                    "Zona:N",
+                                    title="",
+                                    sort="-x"
+                                ),
+
+                                tooltip=[
+                                    alt.Tooltip(
+                                        "Zona:N",
+                                        title="Zona"
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Carga:Q",
+                                        title="Carga",
+                                        format=".1f"
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Porcentaje:Q",
+                                        title="% de la carga",
+                                        format=".1f"
+                                    )
+                                ]
+                            )
+                            .properties(
+                                height=350
+                            )
+                        )
+
+
+                        st.altair_chart(
+                            grafica_zonas_acumulada,
+                            use_container_width=True
+                        )
+
+
+                        # =================================================
+                        # TABLA DE DISTRIBUCIÓN
+                        # =================================================
+
+                        st.dataframe(
+                            df_carga_zonas,
+                            use_container_width=True,
+                            hide_index=True
+                        )
+
+
+                        # =================================================
+                        # EVOLUCIÓN SEMANAL POR ZONA
+                        # =================================================
+
+                        st.markdown(
+                            "### Evolución semanal por zona"
+                        )
+
+
+                        carga_semanal_zonas = (
+                            df_dashboard_alumno
+                            .groupby(
+                                "Semana",
+                                as_index=False
+                            )[
+                                zonas_dashboard
+                            ]
+                            .sum()
+                            .sort_values(
+                                "Semana"
+                            )
+                        )
+
+
+                        carga_semanal_long = (
+                            carga_semanal_zonas
+                            .melt(
+                                id_vars=[
+                                    "Semana"
+                                ],
+                                value_vars=
+                                    zonas_dashboard,
+                                var_name="Zona",
+                                value_name="Carga"
+                            )
+                        )
+
+
+                        carga_semanal_long[
+                            "Carga"
+                        ] = (
+                            pd.to_numeric(
+                                carga_semanal_long[
+                                    "Carga"
+                                ],
+                                errors="coerce"
+                            )
+                            .fillna(0)
+                        )
+
+
+                        grafica_evolucion_zonas = (
+                            alt.Chart(
+                                carga_semanal_long
+                            )
+                            .mark_line(
+                                point=True
+                            )
+                            .encode(
+
+                                x=alt.X(
+                                    "Semana:Q",
+                                    title="Semana"
+                                ),
+
+                                y=alt.Y(
+                                    "Carga:Q",
+                                    title="Carga por zona"
+                                ),
+
+                                color=alt.Color(
+                                    "Zona:N",
+                                    title="Zona"
+                                ),
+
+                                tooltip=[
+                                    alt.Tooltip(
+                                        "Semana:Q",
+                                        title="Semana"
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Zona:N",
+                                        title="Zona"
+                                    ),
+
+                                    alt.Tooltip(
+                                        "Carga:Q",
+                                        title="Carga",
+                                        format=".1f"
+                                    )
+                                ]
+                            )
+                            .properties(
+                                height=400
+                            )
+                            .interactive()
+                        )
+
+
+                        st.altair_chart(
+                            grafica_evolucion_zonas,
+                            use_container_width=True
+                        )
+
+
+                        # =================================================
+                        # FILTRO POR ZONA
+                        # =================================================
+
+                        zona_seleccionada_dashboard = (
+                            st.selectbox(
+                                "Analizar una zona",
+                                zonas_dashboard,
+                                index=None,
+                                placeholder=(
+                                    "Selecciona una zona..."
+                                ),
+                                key=(
+                                    "dashboard_fisico_zona"
+                                )
+                            )
+                        )
+
+
+                        if (
+                            zona_seleccionada_dashboard
+                            is not None
+                        ):
+
+                            df_zona_individual = (
+                                carga_semanal_zonas[
+                                    [
+                                        "Semana",
+                                        zona_seleccionada_dashboard
+                                    ]
+                                ]
+                                .copy()
+                                .rename(
+                                    columns={
+                                        zona_seleccionada_dashboard:
+                                            "Carga"
+                                    }
+                                )
+                            )
+
+
+                            carga_zona_total = (
+                                df_zona_individual[
+                                    "Carga"
+                                ]
+                                .sum()
+                            )
+
+
+                            carga_zona_media = (
+                                df_zona_individual[
+                                    "Carga"
+                                ]
+                                .mean()
+                            )
+
+
+                            carga_zona_maxima = (
+                                df_zona_individual[
+                                    "Carga"
+                                ]
+                                .max()
+                            )
+
+
+                            col_za1, col_za2, col_za3 = (
+                                st.columns(3)
+                            )
+
+
+                            col_za1.metric(
+                                "Carga acumulada",
+                                f"{carga_zona_total:.1f}"
+                            )
+
+
+                            col_za2.metric(
+                                "Media semanal",
+                                f"{carga_zona_media:.1f}"
+                            )
+
+
+                            col_za3.metric(
+                                "Máximo semanal",
+                                f"{carga_zona_maxima:.1f}"
+                            )
+
+
+                            grafica_zona_individual = (
+                                alt.Chart(
+                                    df_zona_individual
+                                )
+                                .mark_line(
+                                    point=True
+                                )
+                                .encode(
+
+                                    x=alt.X(
+                                        "Semana:Q",
+                                        title="Semana"
+                                    ),
+
+                                    y=alt.Y(
+                                        "Carga:Q",
+                                        title=(
+                                            f"Carga · "
+                                            f"{zona_seleccionada_dashboard}"
+                                        )
+                                    ),
+
+                                    tooltip=[
+                                        alt.Tooltip(
+                                            "Semana:Q",
+                                            title="Semana"
+                                        ),
+
+                                        alt.Tooltip(
+                                            "Carga:Q",
+                                            title="Carga",
+                                            format=".1f"
+                                        )
+                                    ]
+                                )
+                                .properties(
+                                    height=320
+                                )
+                                .interactive()
+                            )
+
+
+                            st.altair_chart(
+                                grafica_zona_individual,
+                                use_container_width=True
+                            )
 
 
     except Exception as error:
