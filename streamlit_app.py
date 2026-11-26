@@ -5627,7 +5627,7 @@ elif pagina == "Acondicionamiento físico":
                                 grafica_zona_individual,
                                 use_container_width=True
                             )
-                                                    # =================================================
+                        # =================================================
                         # PASO 5C — PLANIFICADO VS REAL
                         # =================================================
 
@@ -6311,6 +6311,746 @@ elif pagina == "Acondicionamiento físico":
                             use_container_width=True,
                             hide_index=True
                         )
+                                                # =================================================
+                        # PASO 5D — PROGRESIÓN POR EJERCICIO
+                        # =================================================
+
+                        st.divider()
+
+                        st.subheader(
+                            "Progresión por ejercicio"
+                        )
+
+                        st.caption(
+                            "Analiza cómo evoluciona un ejercicio específico "
+                            "a lo largo del bloque."
+                        )
+
+
+                        # =================================================
+                        # LISTA DE EJERCICIOS DISPONIBLES
+                        # =================================================
+
+                        ejercicios_progresion = (
+                            df_dashboard_alumno[
+                                "Ejercicio"
+                            ]
+                            .dropna()
+                            .astype(str)
+                            .str.strip()
+                            .unique()
+                            .tolist()
+                        )
+
+                        ejercicios_progresion = sorted(
+                            ejercicios_progresion
+                        )
+
+
+                        ejercicio_progresion = (
+                            st.selectbox(
+                                "Ejercicio a analizar",
+                                ejercicios_progresion,
+                                index=None,
+                                placeholder=(
+                                    "Selecciona un ejercicio..."
+                                ),
+                                key=(
+                                    "dashboard_fisico_ejercicio"
+                                )
+                            )
+                        )
+
+
+                        if ejercicio_progresion is not None:
+
+                            # =============================================
+                            # FILTRAR EJERCICIO
+                            # =============================================
+
+                            df_ejercicio_progresion = (
+                                df_dashboard_alumno[
+                                    df_dashboard_alumno[
+                                        "Ejercicio"
+                                    ]
+                                    .astype(str)
+                                    .str.strip()
+                                    ==
+                                    ejercicio_progresion
+                                ]
+                                .copy()
+                            )
+
+
+                            # =============================================
+                            # ASEGURAR COLUMNAS NUMÉRICAS
+                            # =============================================
+
+                            columnas_progresion = [
+                                "Semana",
+                                "Sesión",
+                                "Series planificadas",
+                                "Series reales",
+                                "Repeticiones planificadas",
+                                "Repeticiones reales",
+                                "Carga externa planificada",
+                                "Carga externa real",
+                                "RPE planificado",
+                                "RPE real"
+                            ]
+
+
+                            for columna in columnas_progresion:
+
+                                df_ejercicio_progresion[
+                                    columna
+                                ] = pd.to_numeric(
+                                    df_ejercicio_progresion[
+                                        columna
+                                    ],
+                                    errors="coerce"
+                                )
+
+
+                            df_ejercicio_progresion = (
+                                df_ejercicio_progresion
+                                .dropna(
+                                    subset=[
+                                        "Semana",
+                                        "Sesión"
+                                    ]
+                                )
+                                .sort_values(
+                                    [
+                                        "Semana",
+                                        "Sesión"
+                                    ]
+                                )
+                            )
+
+
+                            # =============================================
+                            # MÉTRICAS DERIVADAS
+                            # =============================================
+
+                            df_ejercicio_progresion[
+                                "Volumen real"
+                            ] = (
+                                df_ejercicio_progresion[
+                                    "Series reales"
+                                ]
+                                *
+                                df_ejercicio_progresion[
+                                    "Repeticiones reales"
+                                ]
+                            )
+
+
+                            df_ejercicio_progresion[
+                                "Volumen planificado"
+                            ] = (
+                                df_ejercicio_progresion[
+                                    "Series planificadas"
+                                ]
+                                *
+                                df_ejercicio_progresion[
+                                    "Repeticiones planificadas"
+                                ]
+                            )
+
+
+                            df_ejercicio_progresion[
+                                "Trabajo externo real"
+                            ] = (
+                                df_ejercicio_progresion[
+                                    "Volumen real"
+                                ]
+                                *
+                                df_ejercicio_progresion[
+                                    "Carga externa real"
+                                ]
+                            )
+
+
+                            df_ejercicio_progresion[
+                                "Trabajo externo planificado"
+                            ] = (
+                                df_ejercicio_progresion[
+                                    "Volumen planificado"
+                                ]
+                                *
+                                df_ejercicio_progresion[
+                                    "Carga externa planificada"
+                                ]
+                            )
+
+
+                            # =============================================
+                            # PRIMER Y ÚLTIMO REGISTRO
+                            # =============================================
+
+                            primer_registro = (
+                                df_ejercicio_progresion
+                                .iloc[0]
+                            )
+
+
+                            ultimo_registro = (
+                                df_ejercicio_progresion
+                                .iloc[-1]
+                            )
+
+
+                            # =============================================
+                            # KPIs PRINCIPALES
+                            # =============================================
+
+                            carga_inicial = float(
+                                primer_registro[
+                                    "Carga externa real"
+                                ]
+                            )
+
+                            carga_actual = float(
+                                ultimo_registro[
+                                    "Carga externa real"
+                                ]
+                            )
+
+
+                            volumen_inicial = float(
+                                primer_registro[
+                                    "Volumen real"
+                                ]
+                            )
+
+                            volumen_actual = float(
+                                ultimo_registro[
+                                    "Volumen real"
+                                ]
+                            )
+
+
+                            rpe_inicial = float(
+                                primer_registro[
+                                    "RPE real"
+                                ]
+                            )
+
+                            rpe_actual = float(
+                                ultimo_registro[
+                                    "RPE real"
+                                ]
+                            )
+
+
+                            sesiones_ejercicio = len(
+                                df_ejercicio_progresion
+                            )
+
+
+                            col_e1, col_e2, col_e3, col_e4 = (
+                                st.columns(4)
+                            )
+
+
+                            col_e1.metric(
+                                "Sesiones registradas",
+                                sesiones_ejercicio
+                            )
+
+
+                            col_e2.metric(
+                                "Carga externa actual",
+                                f"{carga_actual:.1f} kg",
+                                delta=(
+                                    f"{carga_actual - carga_inicial:+.1f} kg "
+                                    "desde el primer registro"
+                                )
+                            )
+
+
+                            col_e3.metric(
+                                "Volumen actual",
+                                f"{volumen_actual:.0f} reps",
+                                delta=(
+                                    f"{volumen_actual - volumen_inicial:+.0f} "
+                                    "reps"
+                                )
+                            )
+
+
+                            col_e4.metric(
+                                "RPE actual",
+                                f"{rpe_actual:.1f}",
+                                delta=(
+                                    f"{rpe_actual - rpe_inicial:+.1f} "
+                                    "desde el inicio"
+                                ),
+                                delta_color="inverse"
+                            )
+
+
+                            # =============================================
+                            # INFORMACIÓN DEL ÚLTIMO REGISTRO
+                            # =============================================
+
+                            st.caption(
+                                f"Último registro: semana "
+                                f"{int(ultimo_registro['Semana'])} · "
+                                f"sesión "
+                                f"{int(ultimo_registro['Sesión'])}."
+                            )
+
+
+                            # =============================================
+                            # RESUMEN SEMANAL DEL EJERCICIO
+                            # =============================================
+
+                            resumen_ejercicio_semanal = (
+                                df_ejercicio_progresion
+                                .groupby(
+                                    "Semana",
+                                    as_index=False
+                                )
+                                .agg({
+                                    "Series planificadas":
+                                        "sum",
+
+                                    "Series reales":
+                                        "sum",
+
+                                    "Repeticiones planificadas":
+                                        "mean",
+
+                                    "Repeticiones reales":
+                                        "mean",
+
+                                    "Carga externa planificada":
+                                        "mean",
+
+                                    "Carga externa real":
+                                        "mean",
+
+                                    "RPE planificado":
+                                        "mean",
+
+                                    "RPE real":
+                                        "mean",
+
+                                    "Volumen planificado":
+                                        "sum",
+
+                                    "Volumen real":
+                                        "sum",
+
+                                    "Trabajo externo planificado":
+                                        "sum",
+
+                                    "Trabajo externo real":
+                                        "sum"
+                                })
+                                .sort_values(
+                                    "Semana"
+                                )
+                            )
+
+
+                            # =============================================
+                            # CARGA EXTERNA
+                            # =============================================
+
+                            hay_carga_externa = (
+                                (
+                                    resumen_ejercicio_semanal[
+                                        "Carga externa planificada"
+                                    ]
+                                    >
+                                    0
+                                )
+                                |
+                                (
+                                    resumen_ejercicio_semanal[
+                                        "Carga externa real"
+                                    ]
+                                    >
+                                    0
+                                )
+                            ).any()
+
+
+                            if hay_carga_externa:
+
+                                st.markdown(
+                                    "### Evolución de carga externa"
+                                )
+
+
+                                carga_ejercicio_long = (
+                                    resumen_ejercicio_semanal[
+                                        [
+                                            "Semana",
+                                            "Carga externa planificada",
+                                            "Carga externa real"
+                                        ]
+                                    ]
+                                    .melt(
+                                        id_vars="Semana",
+                                        var_name="Tipo",
+                                        value_name="Carga"
+                                    )
+                                )
+
+
+                                grafica_carga_ejercicio = (
+                                    alt.Chart(
+                                        carga_ejercicio_long
+                                    )
+                                    .mark_line(
+                                        point=True
+                                    )
+                                    .encode(
+
+                                        x=alt.X(
+                                            "Semana:Q",
+                                            title="Semana"
+                                        ),
+
+                                        y=alt.Y(
+                                            "Carga:Q",
+                                            title="Carga externa (kg)"
+                                        ),
+
+                                        color=alt.Color(
+                                            "Tipo:N",
+                                            title=""
+                                        ),
+
+                                        tooltip=[
+                                            alt.Tooltip(
+                                                "Semana:Q",
+                                                title="Semana"
+                                            ),
+
+                                            alt.Tooltip(
+                                                "Tipo:N",
+                                                title=""
+                                            ),
+
+                                            alt.Tooltip(
+                                                "Carga:Q",
+                                                title="kg",
+                                                format=".1f"
+                                            )
+                                        ]
+                                    )
+                                    .properties(
+                                        height=320
+                                    )
+                                    .interactive()
+                                )
+
+
+                                st.altair_chart(
+                                    grafica_carga_ejercicio,
+                                    use_container_width=True
+                                )
+
+
+                            # =============================================
+                            # VOLUMEN
+                            # =============================================
+
+                            st.markdown(
+                                "### Evolución del volumen"
+                            )
+
+
+                            volumen_ejercicio_long = (
+                                resumen_ejercicio_semanal[
+                                    [
+                                        "Semana",
+                                        "Volumen planificado",
+                                        "Volumen real"
+                                    ]
+                                ]
+                                .melt(
+                                    id_vars="Semana",
+                                    var_name="Tipo",
+                                    value_name="Volumen"
+                                )
+                            )
+
+
+                            grafica_volumen_ejercicio = (
+                                alt.Chart(
+                                    volumen_ejercicio_long
+                                )
+                                .mark_line(
+                                    point=True
+                                )
+                                .encode(
+
+                                    x=alt.X(
+                                        "Semana:Q",
+                                        title="Semana"
+                                    ),
+
+                                    y=alt.Y(
+                                        "Volumen:Q",
+                                        title=(
+                                            "Series × repeticiones"
+                                        )
+                                    ),
+
+                                    color=alt.Color(
+                                        "Tipo:N",
+                                        title=""
+                                    ),
+
+                                    tooltip=[
+                                        alt.Tooltip(
+                                            "Semana:Q",
+                                            title="Semana"
+                                        ),
+
+                                        alt.Tooltip(
+                                            "Tipo:N",
+                                            title=""
+                                        ),
+
+                                        alt.Tooltip(
+                                            "Volumen:Q",
+                                            title="Volumen",
+                                            format=".0f"
+                                        )
+                                    ]
+                                )
+                                .properties(
+                                    height=320
+                                )
+                                .interactive()
+                            )
+
+
+                            st.altair_chart(
+                                grafica_volumen_ejercicio,
+                                use_container_width=True
+                            )
+
+
+                            # =============================================
+                            # RPE
+                            # =============================================
+
+                            st.markdown(
+                                "### Evolución del RPE"
+                            )
+
+
+                            rpe_ejercicio_long = (
+                                resumen_ejercicio_semanal[
+                                    [
+                                        "Semana",
+                                        "RPE planificado",
+                                        "RPE real"
+                                    ]
+                                ]
+                                .melt(
+                                    id_vars="Semana",
+                                    var_name="Tipo",
+                                    value_name="RPE"
+                                )
+                            )
+
+
+                            grafica_rpe_ejercicio = (
+                                alt.Chart(
+                                    rpe_ejercicio_long
+                                )
+                                .mark_line(
+                                    point=True
+                                )
+                                .encode(
+
+                                    x=alt.X(
+                                        "Semana:Q",
+                                        title="Semana"
+                                    ),
+
+                                    y=alt.Y(
+                                        "RPE:Q",
+                                        title="RPE",
+                                        scale=alt.Scale(
+                                            domain=[
+                                                0,
+                                                10
+                                            ]
+                                        )
+                                    ),
+
+                                    color=alt.Color(
+                                        "Tipo:N",
+                                        title=""
+                                    ),
+
+                                    tooltip=[
+                                        alt.Tooltip(
+                                            "Semana:Q",
+                                            title="Semana"
+                                        ),
+
+                                        alt.Tooltip(
+                                            "Tipo:N",
+                                            title=""
+                                        ),
+
+                                        alt.Tooltip(
+                                            "RPE:Q",
+                                            title="RPE",
+                                            format=".1f"
+                                        )
+                                    ]
+                                )
+                                .properties(
+                                    height=320
+                                )
+                                .interactive()
+                            )
+
+
+                            st.altair_chart(
+                                grafica_rpe_ejercicio,
+                                use_container_width=True
+                            )
+
+
+                            # =============================================
+                            # TRABAJO EXTERNO
+                            # =============================================
+
+                            if hay_carga_externa:
+
+                                st.markdown(
+                                    "### Trabajo externo"
+                                )
+
+
+                                trabajo_ejercicio_long = (
+                                    resumen_ejercicio_semanal[
+                                        [
+                                            "Semana",
+                                            "Trabajo externo planificado",
+                                            "Trabajo externo real"
+                                        ]
+                                    ]
+                                    .melt(
+                                        id_vars="Semana",
+                                        var_name="Tipo",
+                                        value_name="Trabajo"
+                                    )
+                                )
+
+
+                                grafica_trabajo_ejercicio = (
+                                    alt.Chart(
+                                        trabajo_ejercicio_long
+                                    )
+                                    .mark_line(
+                                        point=True
+                                    )
+                                    .encode(
+
+                                        x=alt.X(
+                                            "Semana:Q",
+                                            title="Semana"
+                                        ),
+
+                                        y=alt.Y(
+                                            "Trabajo:Q",
+                                            title=(
+                                                "Trabajo externo (kg)"
+                                            )
+                                        ),
+
+                                        color=alt.Color(
+                                            "Tipo:N",
+                                            title=""
+                                        ),
+
+                                        tooltip=[
+                                            alt.Tooltip(
+                                                "Semana:Q",
+                                                title="Semana"
+                                            ),
+
+                                            alt.Tooltip(
+                                                "Tipo:N",
+                                                title=""
+                                            ),
+
+                                            alt.Tooltip(
+                                                "Trabajo:Q",
+                                                title="Trabajo",
+                                                format=".0f"
+                                            )
+                                        ]
+                                    )
+                                    .properties(
+                                        height=320
+                                    )
+                                    .interactive()
+                                )
+
+
+                                st.altair_chart(
+                                    grafica_trabajo_ejercicio,
+                                    use_container_width=True
+                                )
+
+
+                            # =============================================
+                            # TABLA HISTÓRICA
+                            # =============================================
+
+                            st.markdown(
+                                "### Historial del ejercicio"
+                            )
+
+
+                            columnas_historial_ejercicio = [
+                                "Semana",
+                                "Sesión",
+                                "Series planificadas",
+                                "Series reales",
+                                "Repeticiones planificadas",
+                                "Repeticiones reales",
+                                "Carga externa planificada",
+                                "Carga externa real",
+                                "RPE planificado",
+                                "RPE real",
+                                "Volumen planificado",
+                                "Volumen real"
+                            ]
+
+
+                            st.dataframe(
+                                df_ejercicio_progresion[
+                                    columnas_historial_ejercicio
+                                ]
+                                .sort_values(
+                                    [
+                                        "Semana",
+                                        "Sesión"
+                                    ],
+                                    ascending=[
+                                        False,
+                                        False
+                                    ]
+                                ),
+                                use_container_width=True,
+                                hide_index=True
+                            )
 
 
     except Exception as error:
